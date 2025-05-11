@@ -1,3 +1,5 @@
+// DEPRECATED: This file is no longer used. All quiz data is now loaded from Supabase.
+
 // src/data/dummyData.js
 // Dummy data for the quiz app
 

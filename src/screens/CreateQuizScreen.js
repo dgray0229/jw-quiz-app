@@ -17,6 +17,7 @@ import {
 	useTheme,
 } from "react-native-paper";
 import { useQuiz } from "../context/QuizContext";
+import { supabase } from "../utils/supabaseClient";
 
 const CreateQuizScreen = ({ navigation }) => {
 	const theme = useTheme();
@@ -39,6 +40,8 @@ const CreateQuizScreen = ({ navigation }) => {
 	const [categoryDialogVisible, setCategoryDialogVisible] = useState(false);
 	const [questionDialogVisible, setQuestionDialogVisible] = useState(false);
 	const [editingQuestionIndex, setEditingQuestionIndex] = useState(-1);
+
+	const [saving, setSaving] = useState(false);
 
 	// Add or update question
 	const handleSaveQuestion = () => {
@@ -105,7 +108,7 @@ const CreateQuizScreen = ({ navigation }) => {
 	};
 
 	// Save the entire quiz
-	const handleSaveQuiz = () => {
+	const handleSaveQuiz = async () => {
 		// Validate quiz
 		if (!quizTitle.trim()) {
 			Alert.alert("Error", "Please enter a quiz title");
@@ -122,21 +125,61 @@ const CreateQuizScreen = ({ navigation }) => {
 			return;
 		}
 
-		// In a real app, we would save to a database here
-		// For the demo version, we'll just show a success message
-		Alert.alert(
-			"Success",
-			"Your quiz has been created! (In a real app, this would be saved to a database)",
-			[
+		setSaving(true);
+		try {
+			// Insert quiz into Supabase
+			const { data: quizData, error: quizError } = await supabase
+				.from("quizzes")
+				.insert([
+					{
+						title: quizTitle,
+						description: quizDescription,
+						category_id: selectedCategory,
+					},
+				])
+				.select()
+				.single();
+
+			if (quizError || !quizData) {
+				throw quizError || new Error("Quiz creation failed");
+			}
+
+			const quizId = quizData.id;
+
+			// Insert questions into Supabase
+			const questionsToInsert = questions.map((q) => ({
+				quiz_id: quizId,
+				question_text: q.questionText,
+				answer_options: q.answerOptions,
+				correct_answer: q.correctAnswer,
+			}));
+
+			const { error: questionsError } = await supabase
+				.from("questions")
+				.insert(questionsToInsert);
+
+			if (questionsError) {
+				throw questionsError;
+			}
+
+			Alert.alert("Success", "Your quiz has been created!", [
 				{
 					text: "OK",
 					onPress: () => {
 						// Reset form and navigate back
+						setQuizTitle("");
+						setQuizDescription("");
+						setSelectedCategory("");
+						setQuestions([]);
 						navigation.goBack();
 					},
 				},
-			]
-		);
+			]);
+		} catch (e) {
+			Alert.alert("Error", e.message || "Failed to create quiz");
+		} finally {
+			setSaving(false);
+		}
 	};
 
 	// Update answer option text
@@ -255,10 +298,13 @@ const CreateQuizScreen = ({ navigation }) => {
 					onPress={handleSaveQuiz}
 					style={styles.saveButton}
 					disabled={
-						questions.length === 0 || !quizTitle.trim() || !selectedCategory
+						saving ||
+						questions.length === 0 ||
+						!quizTitle.trim() ||
+						!selectedCategory
 					}
 				>
-					Save Quiz
+					{saving ? "Saving..." : "Save Quiz"}
 				</Button>
 			</ScrollView>
 

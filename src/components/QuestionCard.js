@@ -49,10 +49,13 @@ const QuestionCard = ({
 	return (
 		<Card style={styles.card}>
 			<Card.Content>
-				<Title style={styles.question}>{question.questionText}</Title>
+				<Title style={styles.question}>{question?.questionText || ""}</Title>
 
 				<View style={styles.optionsContainer}>
-					{question.answerOptions.map((option, index) => (
+					{(question && Array.isArray(question.answerOptions)
+						? question.answerOptions
+						: []
+					).map((option, index) => (
 						<Button
 							key={index}
 							mode="contained"

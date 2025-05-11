@@ -15,7 +15,6 @@ import {
 	Dialog,
 } from "react-native-paper";
 import { useQuiz } from "../context/QuizContext";
-import { clearAllScores } from "../utils/storage";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
 const ProfileScreen = () => {
@@ -39,24 +38,41 @@ const ProfileScreen = () => {
 		setQuizzesTaken(scoreValues.length);
 	}, [scores]);
 
-	// Clear all scores
+	// Clear all scores from Supabase for this device
 	const handleClearScores = async () => {
-		await clearAllScores();
+		try {
+			// Get deviceId from context (QuizContext)
+			const deviceId = localStorage.getItem("quiz_device_id");
+			if (deviceId) {
+				const { error } = await import("../utils/supabaseClient").then(
+					({ supabase }) =>
+						supabase.from("device_scores").delete().eq("device_id", deviceId)
+				);
+				if (error) {
+					console.error("Error clearing scores from Supabase:", error);
+				}
+			}
+		} catch (e) {
+			console.error("Error clearing scores:", e);
+		}
 		setDialogVisible(false);
-		// In a real app, we would refresh the context data here
-		// This is simplified for the demo
+		// Optionally, trigger a refresh in context (if needed)
+		// This will be picked up by context on next load
+		// window.location.reload(); // or trigger a context refresh if available
 	};
 
-	// Find quiz name by ID
+	// Find quiz name by ID using quizzes from context
 	const findQuizNameById = (quizId) => {
-		// For dummy data, just return a placeholder
-		return quizId ? `Quiz ${quizId}` : "Unknown Quiz";
+		const quiz = quizzes.find((q) => q.id === quizId);
+		return quiz ? quiz.title : "Unknown Quiz";
 	};
 
-	// Get the quiz category by quiz ID
+	// Get the quiz category by quiz ID using categories from context
 	const getQuizCategoryById = (quizId) => {
-		// For dummy data, just return a placeholder
-		return "Quiz Category";
+		const quiz = quizzes.find((q) => q.id === quizId);
+		if (!quiz) return "Unknown Category";
+		const category = categories.find((c) => c.id === quiz.category_id);
+		return category ? category.name : "Unknown Category";
 	};
 
 	return (

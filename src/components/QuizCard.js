@@ -15,13 +15,35 @@ const QuizCard = ({ quiz, categoryId, onPress }) => {
 	const theme = useTheme();
 	const { getScoreForQuiz } = useQuiz();
 
+	// Always default questions to an array to prevent .length crash
+	const questions = quiz && Array.isArray(quiz.questions) ? quiz.questions : [];
+
 	// Get user's best score for this quiz
-	const bestScore = getScoreForQuiz(quiz.id);
-	const totalQuestions = quiz.questions.length;
+	const bestScore = quiz ? getScoreForQuiz(quiz.id) : 0;
+	const totalQuestions = questions.length;
 	const scorePercentage = totalQuestions > 0 ? bestScore / totalQuestions : 0;
 
+	if (!quiz) {
+		return (
+			<Card style={styles.card}>
+				<Card.Content>
+					<Title style={styles.title}>Loading...</Title>
+					<Paragraph style={styles.description}>
+						Loading quiz details...
+					</Paragraph>
+					<Text style={styles.questionsCount}>0 Questions</Text>
+				</Card.Content>
+			</Card>
+		);
+	}
+
+	const isDisabled = totalQuestions === 0;
+
 	return (
-		<Card style={styles.card} onPress={onPress}>
+		<Card
+			style={[styles.card, isDisabled && styles.disabledCard]}
+			onPress={isDisabled ? undefined : onPress}
+		>
 			<Card.Content>
 				<Title style={styles.title}>{quiz.title}</Title>
 				<Paragraph numberOfLines={2} style={styles.description}>
@@ -74,6 +96,9 @@ const styles = StyleSheet.create({
 		marginTop: 8,
 		height: 8,
 		borderRadius: 4,
+	},
+	disabledCard: {
+		opacity: 0.5,
 	},
 });
 

@@ -1,57 +1,102 @@
-// src/context/QuizContext.js
 import React, { createContext, useState, useContext, useEffect } from "react";
-import { categories, quizzes, userScores } from "../data/dummyData";
-import { getQuizScores, saveQuizScore } from "../utils/storage";
+import { supabase } from "../utils/supabaseClient";
+import * as Device from "expo-device";
 
-// Create context
 const QuizContext = createContext();
 
-// Quiz provider component
 export const QuizProvider = ({ children }) => {
-	const [allCategories, setAllCategories] = useState(categories);
-	const [allQuizzes, setAllQuizzes] = useState(quizzes);
-	const [scores, setScores] = useState({});
+	const [categories, setCategories] = useState([]);
+	const [quizzes, setQuizzes] = useState([]); // Flat array of quizzes
+	const [questions, setQuestions] = useState([]); // Flat array of questions
+	const [scores, setScores] = useState({}); // { quizId: bestScore }
 	const [loading, setLoading] = useState(true);
+	const [deviceId, setDeviceId] = useState(null);
 
-	// Load scores from AsyncStorage on mount
+	// Generate or get a persistent device ID for anonymous users
 	useEffect(() => {
-		const loadScores = async () => {
+		const getOrCreateDeviceId = async () => {
+			let id = null;
 			try {
-				const savedScores = await getQuizScores();
-				// If no saved scores, use dummy data for initial demo
-				setScores(
-					Object.keys(savedScores).length > 0 ? savedScores : userScores
-				);
-			} catch (error) {
-				console.error("Failed to load scores:", error);
-				// Fallback to dummy data
-				setScores(userScores);
-			} finally {
-				setLoading(false);
+				id = localStorage.getItem("quiz_device_id");
+				if (!id) {
+					id = `${Device.modelName || "web"}-${Date.now()}-${Math.random()
+						.toString(36)
+						.substring(2, 9)}`;
+					localStorage.setItem("quiz_device_id", id);
+				}
+			} catch (e) {
+				// fallback for React Native (no localStorage)
+				id = `${Device.modelName || "mobile"}-${Date.now()}-${Math.random()
+					.toString(36)
+					.substring(2, 9)}`;
 			}
+			setDeviceId(id);
 		};
-
-		loadScores();
+		getOrCreateDeviceId();
 	}, []);
 
-	// Save a new quiz score
-	const updateScore = async (quizId, newScore) => {
-		await saveQuizScore(quizId, newScore);
-		setScores((prev) => ({
-			...prev,
-			[quizId]: Math.max(newScore, prev[quizId] || 0),
-		}));
+	// Fetch all categories from Supabase
+	const fetchCategories = async () => {
+		const { data, error } = await supabase.from("categories").select("*");
+		if (!error) setCategories(data);
 	};
+
+	// Fetch all quizzes from Supabase
+	const fetchQuizzes = async () => {
+		const { data, error } = await supabase.from("quizzes").select("*");
+		if (!error) setQuizzes(data);
+	};
+
+	// Fetch all questions from Supabase
+	const fetchQuestions = async () => {
+		const { data, error } = await supabase.from("questions").select("*");
+		if (!error) setQuestions(data);
+	};
+
+	// Fetch best scores for this device from Supabase
+	const fetchScores = async (deviceId) => {
+		if (!deviceId) return;
+		const { data, error } = await supabase
+			.from("device_scores")
+			.select("quiz_id, score")
+			.eq("device_id", deviceId);
+		if (!error && data) {
+			// Map to { quizId: bestScore }
+			const bestScores = {};
+			data.forEach(({ quiz_id, score }) => {
+				if (!bestScores[quiz_id] || score > bestScores[quiz_id]) {
+					bestScores[quiz_id] = score;
+				}
+			});
+			setScores(bestScores);
+		}
+	};
+
+	// Initial load
+	useEffect(() => {
+		const loadAll = async () => {
+			setLoading(true);
+			await fetchCategories();
+			await fetchQuizzes();
+			await fetchQuestions();
+			if (deviceId) await fetchScores(deviceId);
+			setLoading(false);
+		};
+		loadAll();
+		// eslint-disable-next-line
+	}, [deviceId]);
 
 	// Get all quizzes for a specific category
 	const getQuizzesForCategory = (categoryId) => {
-		return allQuizzes[categoryId] || [];
+		return quizzes.filter((quiz) => quiz.category_id === categoryId);
 	};
 
-	// Get a specific quiz by its ID
+	// Get a specific quiz by its ID (with questions)
 	const getQuizById = (categoryId, quizId) => {
-		const categoryQuizzes = allQuizzes[categoryId] || [];
-		return categoryQuizzes.find((quiz) => quiz.id === quizId);
+		const quiz = quizzes.find((q) => q.id === quizId);
+		if (!quiz) return null;
+		const quizQuestions = questions.filter((q) => q.quiz_id === quizId);
+		return { ...quiz, questions: quizQuestions };
 	};
 
 	// Get best score for a specific quiz
@@ -59,10 +104,23 @@ export const QuizProvider = ({ children }) => {
 		return scores[quizId] || 0;
 	};
 
-	// Exposed context value
+	// Update (insert) a new quiz score for this device
+	const updateScore = async (quizId, newScore) => {
+		if (!deviceId) return;
+		// Insert new score
+		await supabase.from("device_scores").insert({
+			device_id: deviceId,
+			quiz_id: quizId,
+			score: newScore,
+		});
+		// Refresh scores
+		await fetchScores(deviceId);
+	};
+
 	const contextValue = {
-		categories: allCategories,
-		quizzes: allQuizzes,
+		categories,
+		quizzes,
+		questions,
 		scores,
 		loading,
 		getQuizzesForCategory,
@@ -76,7 +134,6 @@ export const QuizProvider = ({ children }) => {
 	);
 };
 
-// Custom hook for using quiz context
 export const useQuiz = () => {
 	const context = useContext(QuizContext);
 	if (context === undefined) {

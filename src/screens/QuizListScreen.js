@@ -12,15 +12,12 @@ const QuizListScreen = ({ route, navigation }) => {
 	const [bannerVisible, setBannerVisible] = useState(false);
 
 	useEffect(() => {
-		// Get quizzes for the selected category
-		const categoryQuizzes = getQuizzesForCategory(categoryId);
-		setQuizzes(categoryQuizzes);
-
-		// Show banner if no quizzes available
-		if (categoryQuizzes.length === 0) {
-			setBannerVisible(true);
+		if (!loading) {
+			const categoryQuizzes = getQuizzesForCategory(categoryId) || [];
+			setQuizzes(Array.isArray(categoryQuizzes) ? categoryQuizzes : []);
+			setBannerVisible(categoryQuizzes.length === 0);
 		}
-	}, [categoryId]);
+	}, [categoryId, loading, getQuizzesForCategory]);
 
 	const handleQuizPress = (quiz) => {
 		navigation.navigate("Quiz", {

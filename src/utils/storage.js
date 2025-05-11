@@ -1,4 +1,4 @@
-// src/utils/storage.js
+// DEPRECATED: All quiz data and scores are now managed via Supabase. Do not use these functions.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Keys for storage
