@@ -1,4 +1,3 @@
-// filepath: /Users/devingray/Projects/jw-quiz-app/src/screens/ProfileScreen.js
 import React, { useEffect, useState } from "react";
 import { View, StyleSheet, ScrollView } from "react-native";
 import {
@@ -16,6 +15,7 @@ import {
 } from "react-native-paper";
 import { useQuiz } from "../context/QuizContext";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const ProfileScreen = () => {
 	const theme = useTheme();
@@ -76,6 +76,7 @@ const ProfileScreen = () => {
 	};
 
 	return (
+			<SafeAreaView style={{ flex: 1, backgroundColor: "#f5f5f5" }}>
 		<ScrollView style={styles.container}>
 			{/* User info card */}
 			<Card style={styles.userCard}>
@@ -196,6 +197,7 @@ const ProfileScreen = () => {
 				</Dialog>
 			</Portal>
 		</ScrollView>
+	</SafeAreaView>
 	);
 };
 
