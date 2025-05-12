@@ -15,6 +15,7 @@ import {
 import { useQuiz } from "../context/QuizContext";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import ScoreChart from "../components/ScoreChart";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const DashboardScreen = ({ navigation }) => {
 	const theme = useTheme();
@@ -74,127 +75,135 @@ const DashboardScreen = ({ navigation }) => {
 	};
 
 	return (
-		<View style={styles.container}>
-			<ScrollView
-				style={styles.scrollView}
-				refreshControl={
-					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-				}
-			>
-				{/* Welcome Card */}
-				<Card style={styles.welcomeCard}>
-					<Card.Content>
-						<View style={styles.welcomeHeader}>
-							<View>
-								<Title style={styles.welcomeTitle}>Welcome Back!</Title>
-								<Paragraph style={styles.welcomeSubtitle}>
-									Ready for some new quizzes?
-								</Paragraph>
+		<SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+			<View style={styles.container}>
+				<ScrollView
+					style={styles.scrollView}
+					refreshControl={
+						<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+					}
+				>
+					{/* Welcome Card */}
+					<Card style={styles.welcomeCard}>
+						<Card.Content>
+							<View style={styles.welcomeHeader}>
+								<View>
+									<Title style={styles.welcomeTitle}>Welcome Back!</Title>
+									<Paragraph style={styles.welcomeSubtitle}>
+										Ready for some new quizzes?
+									</Paragraph>
+								</View>
+								<Avatar.Icon
+									size={60}
+									icon="brain"
+									color="#fff"
+									style={{ backgroundColor: theme.colors.primary }}
+								/>
 							</View>
-							<Avatar.Icon
-								size={60}
-								icon="brain"
-								color="#fff"
-								style={{ backgroundColor: theme.colors.primary }}
-							/>
+						</Card.Content>
+						<Card.Actions style={styles.cardActions}>
+							<Button
+								mode="contained"
+								onPress={() => navigation.navigate("Quizzes")}
+							>
+								Take a Quiz
+							</Button>
+						</Card.Actions>
+					</Card>
+
+					{/* Stats Section */}
+					<View style={styles.section}>
+						<Text style={styles.sectionTitle}>Your Stats</Text>
+						<View style={styles.statsRow}>
+							<Card style={styles.statsCard}>
+								<Card.Content style={styles.statsCardContent}>
+									<MaterialCommunityIcons
+										name="check-circle-outline"
+										size={36}
+										color={theme.colors.primary}
+									/>
+									<Title style={styles.statsNumber}>{completedQuizzes}</Title>
+									<Text style={styles.statsLabel}>Quizzes Completed</Text>
+								</Card.Content>
+							</Card>
+
+							<Card style={styles.statsCard}>
+								<Card.Content style={styles.statsCardContent}>
+									<MaterialCommunityIcons
+										name="percent"
+										size={36}
+										color={theme.colors.accent}
+									/>
+									<Title style={styles.statsNumber}>
+										{totalQuizzes
+											? Math.round((completedQuizzes / totalQuizzes) * 100)
+											: 0}
+										%
+									</Title>
+									<Text style={styles.statsLabel}>Completion Rate</Text>
+								</Card.Content>
+							</Card>
 						</View>
-					</Card.Content>
-					<Card.Actions style={styles.cardActions}>
-						<Button
-							mode="contained"
-							onPress={() => navigation.navigate("Quizzes")}
-						>
-							Take a Quiz
-						</Button>
-					</Card.Actions>
-				</Card>
+					</View>
 
-				{/* Stats Section */}
-				<View style={styles.section}>
-					<Text style={styles.sectionTitle}>Your Stats</Text>
-					<View style={styles.statsRow}>
-						<Card style={styles.statsCard}>
-							<Card.Content style={styles.statsCardContent}>
-								<MaterialCommunityIcons
-									name="check-circle-outline"
-									size={36}
-									color={theme.colors.primary}
-								/>
-								<Title style={styles.statsNumber}>{completedQuizzes}</Title>
-								<Text style={styles.statsLabel}>Quizzes Completed</Text>
-							</Card.Content>
-						</Card>
+					{/* Progress Chart */}
+					<View style={styles.section}>
+						<Text style={styles.sectionTitle}>Your Progress</Text>
+						<ScoreChart scores={scores} />
+					</View>
 
-						<Card style={styles.statsCard}>
-							<Card.Content style={styles.statsCardContent}>
-								<MaterialCommunityIcons
-									name="percent"
-									size={36}
-									color={theme.colors.accent}
-								/>
-								<Title style={styles.statsNumber}>
-									{totalQuizzes
-										? Math.round((completedQuizzes / totalQuizzes) * 100)
-										: 0}
-									%
-								</Title>
-								<Text style={styles.statsLabel}>Completion Rate</Text>
-							</Card.Content>
+					{/* Recent Activity */}
+					<View style={styles.section}>
+						<Text style={styles.sectionTitle}>Recent Activity</Text>
+						<Card style={styles.activityCard}>
+							{recentActivity.length > 0 ? (
+								recentActivity.map((activity, index) => (
+									<React.Fragment key={activity.quizId}>
+										<Card.Content style={styles.activityItem}>
+											<View style={styles.activityDetails}>
+												<Text style={styles.activityTitle}>
+													{findQuizById(activity.quizId).title}
+												</Text>
+												<Text style={styles.activityDate}>{activity.date}</Text>
+											</View>
+											<View style={styles.activityScore}>
+												<Text style={styles.scoreText}>
+													Score:{" "}
+													<Text style={styles.scoreValue}>
+														{activity.score}
+													</Text>
+												</Text>
+											</View>
+										</Card.Content>
+										{index < recentActivity.length - 1 && <Divider />}
+									</React.Fragment>
+								))
+							) : (
+								<Card.Content style={styles.emptyActivity}>
+									<Text style={styles.emptyText}>No recent activity</Text>
+								</Card.Content>
+							)}
 						</Card>
 					</View>
-				</View>
+				</ScrollView>
 
-				{/* Progress Chart */}
-				<View style={styles.section}>
-					<Text style={styles.sectionTitle}>Your Progress</Text>
-					<ScoreChart scores={scores} />
-				</View>
-
-				{/* Recent Activity */}
-				<View style={styles.section}>
-					<Text style={styles.sectionTitle}>Recent Activity</Text>
-					<Card style={styles.activityCard}>
-						{recentActivity.length > 0 ? (
-							recentActivity.map((activity, index) => (
-								<React.Fragment key={activity.quizId}>
-									<Card.Content style={styles.activityItem}>
-										<View style={styles.activityDetails}>
-											<Text style={styles.activityTitle}>
-												{findQuizById(activity.quizId).title}
-											</Text>
-											<Text style={styles.activityDate}>{activity.date}</Text>
-										</View>
-										<View style={styles.activityScore}>
-											<Text style={styles.scoreText}>
-												Score:{" "}
-												<Text style={styles.scoreValue}>{activity.score}</Text>
-											</Text>
-										</View>
-									</Card.Content>
-									{index < recentActivity.length - 1 && <Divider />}
-								</React.Fragment>
-							))
-						) : (
-							<Card.Content style={styles.emptyActivity}>
-								<Text style={styles.emptyText}>No recent activity</Text>
-							</Card.Content>
-						)}
-					</Card>
-				</View>
-			</ScrollView>
-
-			{/* FAB for quick quiz start */}
-			<FAB
-				style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-				icon="play"
-				label="Quick Quiz"
-				onPress={() => navigation.navigate("Quizzes")}
-			/>
-		</View>
+				{/* FAB for quick quiz start */}
+				<FAB
+					style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+					icon="play"
+					label="Quick Quiz"
+					onPress={() => navigation.navigate("Quizzes")}
+				/>
+			</View>
+		</SafeAreaView>
 	);
 };
 
 const styles = StyleSheet.create({
+	safeArea: {
+		flex: 1,
+		backgroundColor: "#f5f5f5",
+	},
 	container: {
 		flex: 1,
 		backgroundColor: "#f5f5f5",
