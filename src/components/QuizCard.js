@@ -18,6 +18,15 @@ const QuizCard = ({ quiz, categoryId, onPress }) => {
 	// Always default questions to an array to prevent .length crash
 	const questions = quiz && Array.isArray(quiz.questions) ? quiz.questions : [];
 
+	// Log to help debug
+	console.log(
+		`QuizCard: quiz ${quiz?.id} has ${questions?.length} questions:`,
+		quiz?.questions?.map((q) => ({
+			id: q.id,
+			text: q.questionText || q.question_text,
+		}))
+	);
+
 	// Get user's best score for this quiz
 	const bestScore = quiz ? getScoreForQuiz(quiz.id) : 0;
 	const totalQuestions = questions.length;
@@ -37,13 +46,9 @@ const QuizCard = ({ quiz, categoryId, onPress }) => {
 		);
 	}
 
-	const isDisabled = totalQuestions === 0;
-
+	// Always enable the quiz card, even if there are no questions yet
 	return (
-		<Card
-			style={[styles.card, isDisabled && styles.disabledCard]}
-			onPress={isDisabled ? undefined : onPress}
-		>
+		<Card style={styles.card} onPress={onPress}>
 			<Card.Content>
 				<Title style={styles.title}>{quiz.title}</Title>
 				<Paragraph numberOfLines={2} style={styles.description}>

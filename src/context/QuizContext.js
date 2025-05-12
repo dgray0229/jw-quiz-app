@@ -38,19 +38,34 @@ export const QuizProvider = ({ children }) => {
 	// Fetch all categories from Supabase
 	const fetchCategories = async () => {
 		const { data, error } = await supabase.from("categories").select("*");
-		if (!error) setCategories(data);
+		if (!error) {
+			console.log(`Fetched ${data.length} categories:`, data);
+			setCategories(data);
+		} else {
+			console.error("Error fetching categories:", error);
+		}
 	};
 
 	// Fetch all quizzes from Supabase
 	const fetchQuizzes = async () => {
 		const { data, error } = await supabase.from("quizzes").select("*");
-		if (!error) setQuizzes(data);
+		if (!error) {
+			console.log(`Fetched ${data.length} quizzes:`, data);
+			setQuizzes(data);
+		} else {
+			console.error("Error fetching quizzes:", error);
+		}
 	};
 
 	// Fetch all questions from Supabase
 	const fetchQuestions = async () => {
 		const { data, error } = await supabase.from("questions").select("*");
-		if (!error) setQuestions(data);
+		if (!error) {
+			console.log(`Fetched ${data.length} questions:`, data);
+			setQuestions(data);
+		} else {
+			console.error("Error fetching questions:", error);
+		}
 	};
 
 	// Fetch best scores for this device from Supabase
@@ -86,16 +101,76 @@ export const QuizProvider = ({ children }) => {
 		// eslint-disable-next-line
 	}, [deviceId]);
 
-	// Get all quizzes for a specific category
+	// Get all quizzes for a specific category (with questions attached)
 	const getQuizzesForCategory = (categoryId) => {
-		return quizzes.filter((quiz) => quiz.category_id === categoryId);
+		console.log(`Getting quizzes for category ${categoryId}`);
+
+		const filteredQuizzes = quizzes.filter(
+			(quiz) => String(quiz.category_id) === String(categoryId)
+		);
+
+		console.log(
+			`Found ${filteredQuizzes.length} quizzes for category ${categoryId}:`,
+			filteredQuizzes
+		);
+
+		// Attach questions to each quiz
+		const enrichedQuizzes = filteredQuizzes.map((quiz) => {
+			const quizQuestions = questions
+				.filter((q) => String(q.quiz_id) === String(quiz.id))
+				.map((question) => {
+					// Transform the question to match the expected format in the app
+					return {
+						...question,
+						questionText: question.question_text,
+						answerOptions: Array.isArray(question.answer_options)
+							? question.answer_options
+							: JSON.parse(question.answer_options || '[""]'),
+						correctAnswer:
+							typeof question.correct_answer === "number"
+								? question.correct_answer
+								: parseInt(question.correct_answer || "0", 10),
+					};
+				});
+
+			console.log(`Quiz ${quiz.id} has ${quizQuestions.length} questions`);
+
+			return { ...quiz, questions: quizQuestions };
+		});
+
+		console.log(`Returning ${enrichedQuizzes.length} enriched quizzes`);
+		return enrichedQuizzes;
 	};
 
 	// Get a specific quiz by its ID (with questions)
 	const getQuizById = (categoryId, quizId) => {
-		const quiz = quizzes.find((q) => q.id === quizId);
-		if (!quiz) return null;
-		const quizQuestions = questions.filter((q) => q.quiz_id === quizId);
+		console.log(`Getting quiz ${quizId} for category ${categoryId}`);
+
+		const quiz = quizzes.find((q) => String(q.id) === String(quizId));
+		if (!quiz) {
+			console.log(`Quiz ${quizId} not found`);
+			return null;
+		}
+
+		const quizQuestions = questions
+			.filter((q) => String(q.quiz_id) === String(quizId))
+			.map((question) => {
+				// Transform the question to match the expected format in the app
+				return {
+					...question,
+					questionText: question.question_text,
+					answerOptions: Array.isArray(question.answer_options)
+						? question.answer_options
+						: JSON.parse(question.answer_options || '[""]'),
+					correctAnswer:
+						typeof question.correct_answer === "number"
+							? question.correct_answer
+							: parseInt(question.correct_answer || "0", 10),
+				};
+			});
+
+		console.log(`Found ${quizQuestions.length} questions for quiz ${quizId}`);
+
 		return { ...quiz, questions: quizQuestions };
 	};
 

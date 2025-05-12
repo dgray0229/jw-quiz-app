@@ -14,6 +14,18 @@ const QuizListScreen = ({ route, navigation }) => {
 	useEffect(() => {
 		if (!loading) {
 			const categoryQuizzes = getQuizzesForCategory(categoryId) || [];
+			console.log(
+				`QuizListScreen: Retrieved ${categoryQuizzes.length} quizzes for category ${categoryId}`
+			);
+
+			// Check each quiz to see if it has questions
+			categoryQuizzes.forEach((quiz) => {
+				const questionsCount = quiz.questions ? quiz.questions.length : 0;
+				console.log(
+					`Quiz ${quiz.id} (${quiz.title}) has ${questionsCount} questions`
+				);
+			});
+
 			setQuizzes(Array.isArray(categoryQuizzes) ? categoryQuizzes : []);
 			setBannerVisible(categoryQuizzes.length === 0);
 		}
