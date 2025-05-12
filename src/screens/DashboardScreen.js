@@ -28,12 +28,8 @@ const DashboardScreen = ({ navigation }) => {
 
 	// Function to calculate stats
 	const calculateStats = () => {
-		// Calculate total quizzes
-		let total = 0;
-		Object.keys(quizzes).forEach((categoryId) => {
-			total += quizzes[categoryId]?.length || 0;
-		});
-		setTotalQuizzes(total);
+		// Calculate total quizzes (now quizzes is a flat array)
+		setTotalQuizzes(quizzes.length);
 
 		// Calculate completed quizzes
 		setCompletedQuizzes(Object.keys(scores).length);
@@ -65,17 +61,15 @@ const DashboardScreen = ({ navigation }) => {
 		}, 1000);
 	}, []);
 
-	// Find quiz by ID (in a real app with proper DB relations, this would be simpler)
+	// Find quiz by ID
 	const findQuizById = (quizId) => {
-		for (const categoryId in quizzes) {
-			const foundQuiz = quizzes[categoryId]?.find((q) => q.id === quizId);
-			if (foundQuiz) return foundQuiz;
-		}
-		return { title: "Unknown Quiz" };
+		// With the new flat structure, we can directly find the quiz
+		const foundQuiz = quizzes.find((q) => String(q.id) === String(quizId));
+		return foundQuiz || { title: "Unknown Quiz" };
 	};
 
 	return (
-		<SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+		<SafeAreaView style={styles.safeArea}>
 			<View style={styles.container}>
 				<ScrollView
 					style={styles.scrollView}
@@ -158,7 +152,7 @@ const DashboardScreen = ({ navigation }) => {
 						<Card style={styles.activityCard}>
 							{recentActivity.length > 0 ? (
 								recentActivity.map((activity, index) => (
-									<React.Fragment key={activity.quizId}>
+									<React.Fragment key={activity.quizId || index}>
 										<Card.Content style={styles.activityItem}>
 											<View style={styles.activityDetails}>
 												<Text style={styles.activityTitle}>

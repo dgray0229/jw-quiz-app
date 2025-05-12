@@ -11,7 +11,7 @@ import {
 	Paragraph,
 	useTheme,
 } from "react-native-paper";
-import { MaterialIcons } from "@expo/vector-icons";
+import { MaterialIcons } from '@expo/vector-icons';
 import { useQuiz } from "../context/QuizContext";
 import QuestionCard from "../components/QuestionCard";
 
@@ -59,10 +59,8 @@ const QuizScreen = ({ route, navigation }) => {
 
 	// Select answer for the current question
 	const handleAnswerSelection = (answerIndex) => {
-		console.log(
-			`QuizScreen: Answer selected for question ${currentQuestionIndex}: ${answerIndex}`
-		);
-
+		console.log(`QuizScreen: Answer selected for question ${currentQuestionIndex}: ${answerIndex}`);
+		
 		// Update selected answers state
 		setSelectedAnswers((prev) => {
 			const newAnswers = {
@@ -152,7 +150,7 @@ const QuizScreen = ({ route, navigation }) => {
 
 	// Current question - ensure it has the proper format for our components
 	let currentQuestion = quiz.questions[currentQuestionIndex];
-
+	
 	// Make sure the current question has the right format
 	if (currentQuestion) {
 		// Normalize the question data to have consistent properties
@@ -348,20 +346,20 @@ const styles = StyleSheet.create({
 		height: 52, // Taller buttons for better visibility
 	},
 	buttonContentLeft: {
-		flexDirection: "row", // Icon on the left
+		flexDirection: 'row', // Icon on the left
 		height: 40,
-		alignItems: "center",
-		justifyContent: "center",
+		alignItems: 'center',
+		justifyContent: 'center',
 	},
 	buttonContentRight: {
-		flexDirection: "row-reverse", // Icon on the right
+		flexDirection: 'row-reverse', // Icon on the right
 		height: 40,
-		alignItems: "center",
-		justifyContent: "center",
+		alignItems: 'center',
+		justifyContent: 'center',
 	},
 	buttonLabel: {
 		fontSize: 16,
-		fontWeight: "bold",
+		fontWeight: 'bold',
 		letterSpacing: 0.5,
 		marginHorizontal: 8, // Add some spacing between icon and text
 	},

@@ -13,6 +13,7 @@ import {
 import { useQuiz } from "../context/QuizContext";
 import QuestionCard from "../components/QuestionCard";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const ResultScreen = ({ route, navigation }) => {
 	const { score, totalQuestions, quizId, quizTitle, categoryId, answers } =
@@ -21,6 +22,18 @@ const ResultScreen = ({ route, navigation }) => {
 	const theme = useTheme();
 	const { getQuizById, updateScore } = useQuiz();
 	const quiz = getQuizById(categoryId, quizId);
+
+	// Make sure we have a quiz before proceeding
+	useEffect(() => {
+		if (!quiz) {
+			console.error(`Quiz with id ${quizId} not found`);
+			// Provide a default structure to avoid errors
+			// and allow going back to previous screens
+			navigation.setParams({
+				shouldShowErrorMessage: true,
+			});
+		}
+	}, [quiz, quizId, navigation]);
 
 	// Calculate percentage
 	const percentage = Math.round((score / totalQuestions) * 100);
@@ -58,102 +71,136 @@ const ResultScreen = ({ route, navigation }) => {
 	};
 
 	return (
-		<View style={styles.container}>
-			<ScrollView>
-				{/* Results summary */}
-				<Card style={styles.summaryCard}>
-					<Card.Content style={styles.summaryContent}>
-						<MaterialCommunityIcons
-							name={getResultIcon()}
-							size={64}
-							color={getResultColor()}
-							style={styles.resultIcon}
-						/>
+		<SafeAreaView style={styles.safeArea}>
+			<View style={styles.container}>
+				<ScrollView>
+					{/* Results summary */}
+					<Card style={styles.summaryCard}>
+						<Card.Content style={styles.summaryContent}>
+							<MaterialCommunityIcons
+								name={getResultIcon()}
+								size={64}
+								color={getResultColor()}
+								style={styles.resultIcon}
+							/>
 
-						<Title style={styles.quizTitle}>{quizTitle}</Title>
+							<Title style={styles.quizTitle}>{quizTitle}</Title>
 
-						<View style={styles.scoreContainer}>
-							<Text style={styles.scoreText}>
-								<Text style={styles.scoreValue}>{score}</Text>/{totalQuestions}
-							</Text>
-							<Text style={styles.percentageText}>{percentage}%</Text>
+							<View style={styles.scoreContainer}>
+								<Text style={styles.scoreText}>
+									<Text style={styles.scoreValue}>{score}</Text>/
+									{totalQuestions}
+								</Text>
+								<Text style={styles.percentageText}>{percentage}%</Text>
+							</View>
+
+							<Paragraph style={styles.feedbackText}>{getFeedback()}</Paragraph>
+						</Card.Content>
+					</Card>
+
+					<Divider style={styles.divider} />
+
+					{route.params.shouldShowErrorMessage ? (
+						<Card style={[styles.summaryCard, { marginTop: 20 }]}>
+							<Card.Content>
+								<Title style={{ color: "#F44336" }}>
+									Oops, something went wrong
+								</Title>
+								<Paragraph>
+									We couldn't load the quiz details. Your score has been saved.
+								</Paragraph>
+							</Card.Content>
+						</Card>
+					) : (
+						<View>
+							<Title style={styles.reviewTitle}>Review Your Answers</Title>
+
+							{/* Display each question with correct/wrong answers */}
+							{quiz &&
+								quiz.questions &&
+								quiz.questions.map((question, index) => (
+									<View key={index} style={styles.questionReview}>
+										<QuestionCard
+											question={question}
+											selectedAnswer={answers[index]}
+											showCorrectAnswer={true}
+											onAnswerSelected={() => {}}
+										/>
+
+										<View style={styles.answerResultContainer}>
+											{answers[index] === question.correctAnswer ? (
+												<View style={styles.answerResult}>
+													<MaterialCommunityIcons
+														name="check-circle"
+														size={20}
+														color="#4CAF50"
+													/>
+													<Text
+														style={[
+															styles.answerResultText,
+															{ color: "#4CAF50" },
+														]}
+													>
+														Correct answer!
+													</Text>
+												</View>
+											) : (
+												<View style={styles.answerResult}>
+													<MaterialCommunityIcons
+														name="close-circle"
+														size={20}
+														color="#F44336"
+													/>
+													<Text
+														style={[
+															styles.answerResultText,
+															{ color: "#F44336" },
+														]}
+													>
+														Incorrect answer
+													</Text>
+												</View>
+											)}
+										</View>
+									</View>
+								))}
+
+							{/* Navigation buttons */}
+							<View style={styles.buttonsContainer}>
+								<Button
+									mode="outlined"
+									onPress={() =>
+										navigation.navigate("QuizList", {
+											categoryId,
+											categoryName: "Quiz Category", // This would come from context or params
+										})
+									}
+									style={styles.button}
+								>
+									More Quizzes
+								</Button>
+
+								<Button
+									mode="contained"
+									onPress={() => navigation.navigate("Home")}
+									style={styles.button}
+								>
+									Home
+								</Button>
+							</View>
 						</View>
-
-						<Paragraph style={styles.feedbackText}>{getFeedback()}</Paragraph>
-					</Card.Content>
-				</Card>
-
-				<Divider style={styles.divider} />
-
-				<Title style={styles.reviewTitle}>Review Your Answers</Title>
-
-				{/* Display each question with correct/wrong answers */}
-				{quiz.questions.map((question, index) => (
-					<View key={index} style={styles.questionReview}>
-						<QuestionCard
-							question={question}
-							selectedAnswer={answers[index]}
-							showCorrectAnswer={true}
-							onAnswerSelected={() => {}}
-						/>
-
-						<View style={styles.answerResultContainer}>
-							{answers[index] === question.correctAnswer ? (
-								<View style={styles.answerResult}>
-									<MaterialCommunityIcons
-										name="check-circle"
-										size={20}
-										color="#4CAF50"
-									/>
-									<Text style={[styles.answerResultText, { color: "#4CAF50" }]}>
-										Correct answer!
-									</Text>
-								</View>
-							) : (
-								<View style={styles.answerResult}>
-									<MaterialCommunityIcons
-										name="close-circle"
-										size={20}
-										color="#F44336"
-									/>
-									<Text style={[styles.answerResultText, { color: "#F44336" }]}>
-										Incorrect answer
-									</Text>
-								</View>
-							)}
-						</View>
-					</View>
-				))}
-
-				{/* Navigation buttons */}
-				<View style={styles.buttonsContainer}>
-					<Button
-						mode="outlined"
-						onPress={() =>
-							navigation.navigate("QuizList", {
-								categoryId,
-								categoryName: "Quiz Category", // This would come from context or params
-							})
-						}
-						style={styles.button}
-					>
-						More Quizzes
-					</Button>
-
-					<Button
-						mode="contained"
-						onPress={() => navigation.navigate("Home")}
-						style={styles.button}
-					>
-						Home
-					</Button>
-				</View>
-			</ScrollView>
-		</View>
+					)}
+				</ScrollView>
+			</View>
+		</SafeAreaView>
 	);
 };
 
 const styles = StyleSheet.create({
+	safeArea: {
+		flex: 1,
+		backgroundColor: "#f5f5f5",
+	},
 	container: {
 		flex: 1,
 		backgroundColor: "#f5f5f5",
