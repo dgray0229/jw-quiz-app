@@ -11,7 +11,7 @@ import {
 	useTheme,
 } from "react-native-paper";
 import { useQuiz } from "../context/QuizContext";
-import QuestionCard from "../components/QuestionCard";
+import EnhancedQuestionCard from "../components/EnhancedQuestionCard";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -120,11 +120,11 @@ const ResultScreen = ({ route, navigation }) => {
 								quiz.questions &&
 								quiz.questions.map((question, index) => (
 									<View key={index} style={styles.questionReview}>
-										<QuestionCard
+										<EnhancedQuestionCard
 											question={question}
 											selectedAnswer={answers[index]}
-											showCorrectAnswer={true}
-											onAnswerSelected={() => {}}
+											showResults={true}
+											onAnswer={() => {}}
 										/>
 
 										<View style={styles.answerResultContainer}>

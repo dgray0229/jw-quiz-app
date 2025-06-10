@@ -13,7 +13,7 @@ import {
 } from "react-native-paper";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useQuiz } from "../context/QuizContext";
-import QuestionCard from "../components/QuestionCard";
+import EnhancedQuestionCard from "../components/EnhancedQuestionCard";
 
 const QuizScreen = ({ route, navigation }) => {
 	const { categoryId, quizId } = route.params;
@@ -58,7 +58,34 @@ const QuizScreen = ({ route, navigation }) => {
 	};
 
 	// Select answer for the current question
-	const handleAnswerSelection = (answerIndex) => {
+	const handleAnswerSelection = (answerData) => {
+		// Handle both old format (index) and new format (option object)
+		let answerIndex;
+		
+		if (typeof answerData === 'number') {
+			// Old format: direct index
+			answerIndex = answerData;
+		} else if (answerData && typeof answerData === 'object') {
+			// New format: option object - find the index in the original options
+			const currentQuestion = quiz?.questions[currentQuestionIndex];
+			if (currentQuestion?.answer_options) {
+				// For enhanced format, find index by matching option text or id
+				answerIndex = currentQuestion.answer_options.findIndex(opt => 
+					(typeof opt === 'object' && opt.id === answerData.id) ||
+					opt === answerData.text ||
+					opt === answerData
+				);
+			} else if (currentQuestion?.options) {
+				// For old format, find index by matching text
+				answerIndex = currentQuestion.options.findIndex(opt => opt === answerData.text);
+			}
+			
+			if (answerIndex === -1) {
+				console.warn('Could not find answer index for:', answerData);
+				answerIndex = 0;
+			}
+		}
+
 		console.log(
 			`QuizScreen: Answer selected for question ${currentQuestionIndex}: ${answerIndex}`
 		);
@@ -219,11 +246,11 @@ const QuizScreen = ({ route, navigation }) => {
 						style={styles.scrollView}
 						contentContainerStyle={styles.scrollContent}
 					>
-						<QuestionCard
+						<EnhancedQuestionCard
 							question={currentQuestion}
-							onAnswerSelected={handleAnswerSelection}
+							onAnswer={handleAnswerSelection}
 							selectedAnswer={selectedAnswers[currentQuestionIndex]}
-							showCorrectAnswer={false}
+							showResults={false}
 							key={`question-${currentQuestionIndex}`} /* Add key to ensure re-render */
 						/>
 					</ScrollView>

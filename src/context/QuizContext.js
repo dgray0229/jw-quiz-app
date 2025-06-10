@@ -37,33 +37,45 @@ export const QuizProvider = ({ children }) => {
 
 	// Fetch all categories from Supabase
 	const fetchCategories = async () => {
-		const { data, error } = await supabase.from("categories").select("*");
-		if (!error) {
-			console.log(`Fetched ${data.length} categories:`, data);
-			setCategories(data);
-		} else {
+		try {
+			const { data, error } = await supabase.from("categories").select("*");
+			if (!error) {
+				console.log(`Fetched ${data.length} categories from Supabase:`, data);
+				setCategories(data);
+			} else {
+				console.error("Error fetching categories:", error);
+			}
+		} catch (error) {
 			console.error("Error fetching categories:", error);
 		}
 	};
 
 	// Fetch all quizzes from Supabase
 	const fetchQuizzes = async () => {
-		const { data, error } = await supabase.from("quizzes").select("*");
-		if (!error) {
-			console.log(`Fetched ${data.length} quizzes:`, data);
-			setQuizzes(data);
-		} else {
+		try {
+			const { data, error } = await supabase.from("quizzes").select("*");
+			if (!error) {
+				console.log(`Fetched ${data.length} quizzes from Supabase:`, data);
+				setQuizzes(data);
+			} else {
+				console.error("Error fetching quizzes:", error);
+			}
+		} catch (error) {
 			console.error("Error fetching quizzes:", error);
 		}
 	};
 
 	// Fetch all questions from Supabase
 	const fetchQuestions = async () => {
-		const { data, error } = await supabase.from("questions").select("*");
-		if (!error) {
-			console.log(`Fetched ${data.length} questions:`, data);
-			setQuestions(data);
-		} else {
+		try {
+			const { data, error } = await supabase.from("questions").select("*");
+			if (!error) {
+				console.log(`Fetched ${data.length} questions from Supabase:`, data);
+				setQuestions(data);
+			} else {
+				console.error("Error fetching questions:", error);
+			}
+		} catch (error) {
 			console.error("Error fetching questions:", error);
 		}
 	};
@@ -71,19 +83,24 @@ export const QuizProvider = ({ children }) => {
 	// Fetch best scores for this device from Supabase
 	const fetchScores = async (deviceId) => {
 		if (!deviceId) return;
-		const { data, error } = await supabase
-			.from("device_scores")
-			.select("quiz_id, score")
-			.eq("device_id", deviceId);
-		if (!error && data) {
-			// Map to { quizId: bestScore }
-			const bestScores = {};
-			data.forEach(({ quiz_id, score }) => {
-				if (!bestScores[quiz_id] || score > bestScores[quiz_id]) {
-					bestScores[quiz_id] = score;
-				}
-			});
-			setScores(bestScores);
+		try {
+			const { data, error } = await supabase
+				.from("device_scores")
+				.select("quiz_id, score")
+				.eq("device_id", deviceId);
+			if (!error && data) {
+				// Map to { quizId: bestScore }
+				const bestScores = {};
+				data.forEach(({ quiz_id, score }) => {
+					if (!bestScores[quiz_id] || score > bestScores[quiz_id]) {
+						bestScores[quiz_id] = score;
+					}
+				});
+				setScores(bestScores);
+				console.log(`Fetched scores for device ${deviceId}:`, bestScores);
+			}
+		} catch (error) {
+			console.error("Error fetching scores:", error);
 		}
 	};
 
@@ -182,14 +199,30 @@ export const QuizProvider = ({ children }) => {
 	// Update (insert) a new quiz score for this device
 	const updateScore = async (quizId, newScore) => {
 		if (!deviceId) return;
-		// Insert new score
-		await supabase.from("device_scores").insert({
-			device_id: deviceId,
-			quiz_id: quizId,
-			score: newScore,
-		});
-		// Refresh scores
-		await fetchScores(deviceId);
+		try {
+			// Insert new score
+			await supabase.from("device_scores").insert({
+				device_id: deviceId,
+				quiz_id: quizId,
+				score: newScore,
+			});
+			// Refresh scores
+			await fetchScores(deviceId);
+		} catch (error) {
+			console.error("Error updating score:", error);
+		}
+	};
+
+	// Refresh all data from Supabase (for database reset functionality)
+	const refreshData = async () => {
+		console.log("Refreshing all data from Supabase...");
+		setLoading(true);
+		await fetchCategories();
+		await fetchQuizzes();
+		await fetchQuestions();
+		if (deviceId) await fetchScores(deviceId);
+		setLoading(false);
+		console.log("Data refresh completed");
 	};
 
 	const contextValue = {
@@ -202,6 +235,7 @@ export const QuizProvider = ({ children }) => {
 		getQuizById,
 		getScoreForQuiz,
 		updateScore,
+		refreshData,
 	};
 
 	return (

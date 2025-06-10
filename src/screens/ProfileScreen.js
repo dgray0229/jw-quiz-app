@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+import { View, StyleSheet, ScrollView, Alert } from "react-native";
 import {
 	Avatar,
 	Text,
@@ -16,13 +16,16 @@ import {
 import { useQuiz } from "../context/QuizContext";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { migrateToEnhancedQuestionFormat } from "../utils/questionMigration";
 
 const ProfileScreen = () => {
 	const theme = useTheme();
-	const { categories, quizzes, scores } = useQuiz();
+	const { categories, quizzes, scores, refreshData } = useQuiz();
 	const [dialogVisible, setDialogVisible] = useState(false);
+	const [migrationDialogVisible, setMigrationDialogVisible] = useState(false);
 	const [totalScore, setTotalScore] = useState(0);
 	const [quizzesTaken, setQuizzesTaken] = useState(0);
+	const [migrating, setMigrating] = useState(false);
 
 	// Sample user data (would come from authentication in the future)
 	const user = {
@@ -59,6 +62,47 @@ const ProfileScreen = () => {
 		// Optionally, trigger a refresh in context (if needed)
 		// This will be picked up by context on next load
 		// window.location.reload(); // or trigger a context refresh if available
+	};
+
+	// Handle question migration to enhanced format
+	const handleQuestionMigration = async () => {
+		setMigrating(true);
+		try {
+			console.log("🔄 Starting question migration...");
+			const result = await migrateToEnhancedQuestionFormat();
+			
+			if (result.success) {
+				Alert.alert(
+					"Migration Successful! 🎉",
+					`Enhanced question format migration completed:\n\n` +
+					`• Migrated: ${result.migratedCount} questions\n` +
+					`• Skipped: ${result.skippedCount} questions\n` +
+					`• Total: ${result.totalCount} questions\n\n` +
+					`Questions can now be randomized with optional explanations!`,
+					[{ text: "Great!", onPress: () => setMigrationDialogVisible(false) }]
+				);
+				
+				// Refresh data to get updated questions
+				if (refreshData) {
+					await refreshData();
+				}
+			} else {
+				Alert.alert(
+					"Migration Failed ❌",
+					`Migration encountered an error:\n\n${result.error}\n\nPlease check console for details.`,
+					[{ text: "OK", onPress: () => setMigrationDialogVisible(false) }]
+				);
+			}
+		} catch (error) {
+			console.error("Migration error:", error);
+			Alert.alert(
+				"Migration Error ❌",
+				`An unexpected error occurred:\n\n${error.message}`,
+				[{ text: "OK", onPress: () => setMigrationDialogVisible(false) }]
+			);
+		} finally {
+			setMigrating(false);
+		}
 	};
 
 	// Find quiz name by ID using quizzes from context
@@ -175,9 +219,19 @@ const ProfileScreen = () => {
 				>
 					Reset Quiz History
 				</Button>
+				
+				<Button
+					mode="contained"
+					onPress={() => setMigrationDialogVisible(true)}
+					style={[styles.actionButton, { marginTop: 12 }]}
+					icon="upgrade"
+					buttonColor={theme.colors.secondary}
+				>
+					Upgrade Questions Format
+				</Button>
 			</View>
 
-			{/* Confirmation dialog */}
+			{/* Confirmation dialogs */}
 			<Portal>
 				<Dialog
 					visible={dialogVisible}
@@ -193,6 +247,43 @@ const ProfileScreen = () => {
 					<Dialog.Actions>
 						<Button onPress={() => setDialogVisible(false)}>Cancel</Button>
 						<Button onPress={handleClearScores}>Reset</Button>
+					</Dialog.Actions>
+				</Dialog>
+
+				<Dialog
+					visible={migrationDialogVisible}
+					onDismiss={() => setMigrationDialogVisible(false)}
+				>
+					<Dialog.Title>Upgrade Question Format? 🚀</Dialog.Title>
+					<Dialog.Content>
+						<Paragraph style={{ marginBottom: 16 }}>
+							This will upgrade your questions to the enhanced format with:
+						</Paragraph>
+						<Text style={{ marginLeft: 16, marginBottom: 8 }}>
+							• ✅ Randomizable answer options
+						</Text>
+						<Text style={{ marginLeft: 16, marginBottom: 8 }}>
+							• 📝 Optional answer explanations
+						</Text>
+						<Text style={{ marginLeft: 16, marginBottom: 8 }}>
+							• 🎯 Multiple correct answers support
+						</Text>
+						<Text style={{ marginLeft: 16, marginBottom: 16 }}>
+							• 🔄 Better quiz experience
+						</Text>
+						<Paragraph style={{ fontStyle: 'italic', opacity: 0.8 }}>
+							This is safe and reversible. Existing questions will be preserved.
+						</Paragraph>
+					</Dialog.Content>
+					<Dialog.Actions>
+						<Button onPress={() => setMigrationDialogVisible(false)}>Cancel</Button>
+						<Button 
+							onPress={handleQuestionMigration}
+							loading={migrating}
+							disabled={migrating}
+						>
+							{migrating ? "Upgrading..." : "Upgrade"}
+						</Button>
 					</Dialog.Actions>
 				</Dialog>
 			</Portal>
