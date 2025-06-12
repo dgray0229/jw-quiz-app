@@ -1,448 +1,471 @@
 // src/components/EnhancedQuestionCard.js
 // Enhanced question component with randomization and optional explanations
 
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from "react";
+import { View, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import {
-  Text,
-  Card,
-  RadioButton,
-  Checkbox,
-  Button,
-  Divider,
-  useTheme,
-  IconButton,
-  Portal,
-  Modal,
-  Surface
-} from 'react-native-paper';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+	Text,
+	Card,
+	RadioButton,
+	Checkbox,
+	Button,
+	Divider,
+	useTheme,
+	IconButton,
+	Portal,
+	Modal,
+	Surface,
+} from "react-native-paper";
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import {
-  shuffleAnswers,
-  validateAnswer,
-  processQuestionData,
-  hasAnyExplanations,
-  createAnswerSummary,
-  getAnswerExplanation
-} from '../utils/questionUtils';
+	shuffleAnswers,
+	validateAnswer,
+	processQuestionData,
+	hasAnyExplanations,
+	createAnswerSummary,
+	getAnswerExplanation,
+} from "../utils/questionUtils";
 
-const EnhancedQuestionCard = ({ 
-  question, 
-  onAnswer, 
-  selectedAnswer, // External control of selected answer (for QuizScreen compatibility)
-  showResults = false,
-  allowMultiple = false,
-  showExplanations = true 
+const EnhancedQuestionCard = ({
+	question,
+	onAnswer,
+	selectedAnswer, // External control of selected answer (for QuizScreen compatibility)
+	showResults = false,
+	allowMultiple = false,
+	showExplanations = true,
 }) => {
-  const theme = useTheme();
-  const [processedQuestion, setProcessedQuestion] = useState(null);
-  const [shuffledOptions, setShuffledOptions] = useState([]);
-  const [selectedAnswers, setSelectedAnswers] = useState([]);
-  const [showExplanationModal, setShowExplanationModal] = useState(false);
-  const [selectedExplanation, setSelectedExplanation] = useState(null);
-  const [hasSubmitted, setHasSubmitted] = useState(false);
+	const theme = useTheme();
+	const [processedQuestion, setProcessedQuestion] = useState(null);
+	const [shuffledOptions, setShuffledOptions] = useState([]);
+	const [selectedAnswers, setSelectedAnswers] = useState([]);
+	const [showExplanationModal, setShowExplanationModal] = useState(false);
+	const [selectedExplanation, setSelectedExplanation] = useState(null);
+	const [hasSubmitted, setHasSubmitted] = useState(false);
 
-  // Process and setup question
-  useEffect(() => {
-    if (!question) return;
+	// Process and setup question
+	useEffect(() => {
+		if (!question) return;
 
-    const processed = processQuestionData(question);
-    if (!processed) {
-      console.error('Failed to process question:', question);
-      return;
-    }
+		const processed = processQuestionData(question);
+		if (!processed) {
+			console.error("Failed to process question:", question);
+			return;
+		}
 
-    setProcessedQuestion(processed);
-    
-    // Shuffle answers if enabled
-    const options = processed.shuffleAnswers 
-      ? shuffleAnswers(processed.answerOptions)
-      : processed.answerOptions;
-    
-    setShuffledOptions(options);
-    setSelectedAnswers([]);
-    setHasSubmitted(false);
-  }, [question]);
+		setProcessedQuestion(processed);
 
-  // Handle external selectedAnswer prop (for QuizScreen compatibility)
-  useEffect(() => {
-    if (selectedAnswer !== undefined && shuffledOptions.length > 0) {
-      // Find the option by index (QuizScreen passes index)
-      if (typeof selectedAnswer === 'number' && selectedAnswer >= 0 && selectedAnswer < shuffledOptions.length) {
-        const option = shuffledOptions[selectedAnswer];
-        if (option) {
-          setSelectedAnswers([option]);
-        }
-      } else if (selectedAnswer === null || selectedAnswer === undefined) {
-        // Clear selection
-        setSelectedAnswers([]);
-      }
-    }
-  }, [selectedAnswer, shuffledOptions]);
+		// Shuffle answers if enabled
+		const options = processed.shuffleAnswers
+			? shuffleAnswers(processed.answerOptions)
+			: processed.answerOptions;
 
-  // Handle answer selection
-  const handleAnswerSelect = (selectedOption) => {
-    if (hasSubmitted && !showResults) return;
+		setShuffledOptions(options);
+		setSelectedAnswers([]);
+		setHasSubmitted(false);
+	}, [question]);
 
-    let newSelectedAnswers;
+	// Handle external selectedAnswer prop (for QuizScreen compatibility)
+	useEffect(() => {
+		if (selectedAnswer !== undefined && shuffledOptions.length > 0) {
+			// Find the option by index (QuizScreen passes index)
+			if (
+				typeof selectedAnswer === "number" &&
+				selectedAnswer >= 0 &&
+				selectedAnswer < shuffledOptions.length
+			) {
+				const option = shuffledOptions[selectedAnswer];
+				if (option) {
+					setSelectedAnswers([option]);
+				}
+			} else if (selectedAnswer === null || selectedAnswer === undefined) {
+				// Clear selection
+				setSelectedAnswers([]);
+			}
+		}
+	}, [selectedAnswer, shuffledOptions]);
 
-    if (allowMultiple || processedQuestion?.multipleCorrect) {
-      // Multiple selection mode
-      setSelectedAnswers(prev => {
-        const isAlreadySelected = prev.some(opt => opt.id === selectedOption.id);
-        if (isAlreadySelected) {
-          newSelectedAnswers = prev.filter(opt => opt.id !== selectedOption.id);
-        } else {
-          newSelectedAnswers = [...prev, selectedOption];
-        }
-        
-        // For multiple selection, pass the option object
-        onAnswer && onAnswer(selectedOption);
-        
-        return newSelectedAnswers;
-      });
-    } else {
-      // Single selection mode
-      newSelectedAnswers = [selectedOption];
-      setSelectedAnswers(newSelectedAnswers);
-      
-      // For single selection, pass the index for QuizScreen compatibility
-      const optionIndex = shuffledOptions.findIndex(opt => opt.id === selectedOption.id);
-      onAnswer && onAnswer(optionIndex);
-    }
-  };
+	// Handle answer selection
+	const handleAnswerSelect = (selectedOption) => {
+		if (hasSubmitted && !showResults) return;
 
-  // Submit answer
-  const handleSubmit = () => {
-    if (selectedAnswers.length === 0) {
-      Alert.alert('No Answer Selected', 'Please select an answer before submitting.');
-      return;
-    }
+		let newSelectedAnswers;
 
-    const validationResult = validateAnswer(
-      selectedAnswers, 
-      processedQuestion.answerOptions,
-      true // Allow partial credit
-    );
+		if (allowMultiple || processedQuestion?.multipleCorrect) {
+			// Multiple selection mode
+			setSelectedAnswers((prev) => {
+				const isAlreadySelected = prev.some(
+					(opt) => opt.id === selectedOption.id
+				);
+				if (isAlreadySelected) {
+					newSelectedAnswers = prev.filter(
+						(opt) => opt.id !== selectedOption.id
+					);
+				} else {
+					newSelectedAnswers = [...prev, selectedOption];
+				}
 
-    const summary = createAnswerSummary(
-      validationResult,
-      selectedAnswers,
-      processedQuestion.answerOptions
-    );
+				// For multiple selection, pass the option object
+				onAnswer && onAnswer(selectedOption);
 
-    setHasSubmitted(true);
-    onAnswer && onAnswer(selectedAnswers, summary);
-  };
+				return newSelectedAnswers;
+			});
+		} else {
+			// Single selection mode
+			newSelectedAnswers = [selectedOption];
+			setSelectedAnswers(newSelectedAnswers);
 
-  // Show explanation modal
-  const showExplanation = (option) => {
-    const explanation = getAnswerExplanation(option);
-    if (explanation) {
-      setSelectedExplanation({
-        text: option.text,
-        explanation,
-        isCorrect: option.is_correct
-      });
-      setShowExplanationModal(true);
-    }
-  };
+			// For single selection, pass the index for QuizScreen compatibility
+			const optionIndex = shuffledOptions.findIndex(
+				(opt) => opt.id === selectedOption.id
+			);
+			onAnswer && onAnswer(optionIndex);
+		}
+	};
 
-  if (!processedQuestion) {
-    return (
-      <Card style={styles.card}>
-        <Card.Content>
-          <Text>Loading question...</Text>
-        </Card.Content>
-      </Card>
-    );
-  }
+	// Submit answer
+	const handleSubmit = () => {
+		if (selectedAnswers.length === 0) {
+			Alert.alert(
+				"No Answer Selected",
+				"Please select an answer before submitting."
+			);
+			return;
+		}
 
-  const questionHasExplanations = hasAnyExplanations(processedQuestion.answerOptions);
+		const validationResult = validateAnswer(
+			selectedAnswers,
+			processedQuestion.answerOptions,
+			true // Allow partial credit
+		);
 
-  return (
-    <>
-      <Card style={styles.card}>
-        <Card.Content>
-          {/* Question Text */}
-          <Text style={styles.questionText}>
-            {processedQuestion.question_text || processedQuestion.question}
-          </Text>
+		const summary = createAnswerSummary(
+			validationResult,
+			selectedAnswers,
+			processedQuestion.answerOptions
+		);
 
-          {/* Question Metadata */}
-          {processedQuestion.multipleCorrect && (
-            <View style={styles.metadataContainer}>
-              <MaterialCommunityIcons 
-                name="checkbox-multiple-marked" 
-                size={16} 
-                color={theme.colors.primary} 
-              />
-              <Text style={styles.metadataText}>Multiple answers may be correct</Text>
-            </View>
-          )}
+		setHasSubmitted(true);
+		onAnswer && onAnswer(selectedAnswers, summary);
+	};
 
-          {questionHasExplanations && showExplanations && (
-            <View style={styles.metadataContainer}>
-              <MaterialCommunityIcons 
-                name="information" 
-                size={16} 
-                color={theme.colors.accent} 
-              />
-              <Text style={styles.metadataText}>Tap answers for explanations</Text>
-            </View>
-          )}
+	// Show explanation modal
+	const showExplanation = (option) => {
+		const explanation = getAnswerExplanation(option);
+		if (explanation) {
+			setSelectedExplanation({
+				text: option.text,
+				explanation,
+				isCorrect: option.is_correct,
+			});
+			setShowExplanationModal(true);
+		}
+	};
 
-          <Divider style={styles.divider} />
+	if (!processedQuestion) {
+		return (
+			<Card style={styles.card}>
+				<Card.Content>
+					<Text>Loading question...</Text>
+				</Card.Content>
+			</Card>
+		);
+	}
 
-          {/* Answer Options */}
-          {shuffledOptions.map((option, index) => {
-            const isSelected = selectedAnswers.some(ans => ans.id === option.id);
-            const hasExplanation = getAnswerExplanation(option) !== null;
-            
-            // Determine styling for results view
-            let optionStyle = styles.optionContainer;
-            let textStyle = styles.optionText;
-            
-            if (showResults || hasSubmitted) {
-              if (option.is_correct) {
-                optionStyle = [styles.optionContainer, styles.correctOption];
-                textStyle = [styles.optionText, styles.correctText];
-              } else if (isSelected && !option.is_correct) {
-                optionStyle = [styles.optionContainer, styles.incorrectOption];
-                textStyle = [styles.optionText, styles.incorrectText];
-              }
-            }
+	const questionHasExplanations = hasAnyExplanations(
+		processedQuestion.answerOptions
+	);
 
-            return (
-              <TouchableOpacity
-                key={`${option.id}-${index}`}
-                style={optionStyle}
-                onPress={() => handleAnswerSelect(option)}
-                disabled={hasSubmitted && !showResults}
-              >
-                <View style={styles.optionContent}>
-                  {/* Selection Indicator */}
-                  <View style={styles.selectionIndicator}>
-                    {processedQuestion.multipleCorrect || allowMultiple ? (
-                      <Checkbox
-                        status={isSelected ? 'checked' : 'unchecked'}
-                        onPress={() => handleAnswerSelect(option)}
-                        disabled={hasSubmitted && !showResults}
-                      />
-                    ) : (
-                      <RadioButton
-                        value={option.id}
-                        status={isSelected ? 'checked' : 'unchecked'}
-                        onPress={() => handleAnswerSelect(option)}
-                        disabled={hasSubmitted && !showResults}
-                      />
-                    )}
-                  </View>
+	return (
+		<>
+			<Card style={styles.card}>
+				<Card.Content>
+					{/* Question Text */}
+					<Text style={styles.questionText}>
+						{processedQuestion.question_text || processedQuestion.question}
+					</Text>
 
-                  {/* Answer Text */}
-                  <Text style={[textStyle, styles.answerText]}>
-                    {option.text}
-                  </Text>
+					{/* Question Metadata */}
+					{processedQuestion.multipleCorrect && (
+						<View style={styles.metadataContainer}>
+							<MaterialCommunityIcons
+								name="checkbox-multiple-marked"
+								size={16}
+								color={theme.colors.primary}
+							/>
+							<Text style={styles.metadataText}>
+								Multiple answers may be correct
+							</Text>
+						</View>
+					)}
 
-                  {/* Explanation Icon */}
-                  {hasExplanation && showExplanations && (
-                    <IconButton
-                      icon="information-outline"
-                      size={20}
-                      style={styles.explanationIcon}
-                      onPress={() => showExplanation(option)}
-                    />
-                  )}
+					{questionHasExplanations && showExplanations && (
+						<View style={styles.metadataContainer}>
+							<MaterialCommunityIcons
+								name="information"
+								size={16}
+								color={theme.colors.accent}
+							/>
+							<Text style={styles.metadataText}>
+								Tap answers for explanations
+							</Text>
+						</View>
+					)}
 
-                  {/* Result Indicators */}
-                  {(showResults || hasSubmitted) && (
-                    <View style={styles.resultIndicator}>
-                      {option.is_correct ? (
-                        <MaterialCommunityIcons 
-                          name="check-circle" 
-                          size={24} 
-                          color={theme.colors.primary} 
-                        />
-                      ) : isSelected ? (
-                        <MaterialCommunityIcons 
-                          name="close-circle" 
-                          size={24} 
-                          color={theme.colors.error} 
-                        />
-                      ) : null}
-                    </View>
-                  )}
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </Card.Content>
+					<Divider style={styles.divider} />
 
-        {/* Submit Button */}
-        {!hasSubmitted && !showResults && (
-          <Card.Actions style={styles.actions}>
-            <Button
-              mode="contained"
-              onPress={handleSubmit}
-              disabled={selectedAnswers.length === 0}
-            >
-              Submit Answer
-            </Button>
-          </Card.Actions>
-        )}
-      </Card>
+					{/* Answer Options */}
+					{shuffledOptions.map((option, index) => {
+						const isSelected = selectedAnswers.some(
+							(ans) => ans.id === option.id
+						);
+						const hasExplanation = getAnswerExplanation(option) !== null;
 
-      {/* Explanation Modal */}
-      <Portal>
-        <Modal
-          visible={showExplanationModal}
-          onDismiss={() => setShowExplanationModal(false)}
-          contentContainerStyle={styles.modalContainer}
-        >
-          <Surface style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Answer Explanation</Text>
-            
-            <View style={styles.modalAnswerContainer}>
-              <Text style={styles.modalAnswer}>"{selectedExplanation?.text}"</Text>
-              {selectedExplanation?.isCorrect ? (
-                <MaterialCommunityIcons 
-                  name="check-circle" 
-                  size={24} 
-                  color={theme.colors.primary} 
-                />
-              ) : (
-                <MaterialCommunityIcons 
-                  name="close-circle" 
-                  size={24} 
-                  color={theme.colors.error} 
-                />
-              )}
-            </View>
+						// Determine styling for results view
+						let optionStyle = styles.optionContainer;
+						let textStyle = styles.optionText;
 
-            <Text style={styles.modalExplanation}>
-              {selectedExplanation?.explanation}
-            </Text>
+						if (showResults || hasSubmitted) {
+							if (option.is_correct) {
+								optionStyle = [styles.optionContainer, styles.correctOption];
+								textStyle = [styles.optionText, styles.correctText];
+							} else if (isSelected && !option.is_correct) {
+								optionStyle = [styles.optionContainer, styles.incorrectOption];
+								textStyle = [styles.optionText, styles.incorrectText];
+							}
+						}
 
-            <Button
-              mode="contained"
-              onPress={() => setShowExplanationModal(false)}
-              style={styles.modalButton}
-            >
-              Close
-            </Button>
-          </Surface>
-        </Modal>
-      </Portal>
-    </>
-  );
+						return (
+							<TouchableOpacity
+								key={`${option.id}-${index}`}
+								style={optionStyle}
+								onPress={() => handleAnswerSelect(option)}
+								disabled={hasSubmitted && !showResults}
+							>
+								<View style={styles.optionContent}>
+									{/* Selection Indicator */}
+									<View style={styles.selectionIndicator}>
+										{processedQuestion.multipleCorrect || allowMultiple ? (
+											<Checkbox
+												status={isSelected ? "checked" : "unchecked"}
+												onPress={() => handleAnswerSelect(option)}
+												disabled={hasSubmitted && !showResults}
+											/>
+										) : (
+											<RadioButton
+												value={option.id}
+												status={isSelected ? "checked" : "unchecked"}
+												onPress={() => handleAnswerSelect(option)}
+												disabled={hasSubmitted && !showResults}
+											/>
+										)}
+									</View>
+
+									{/* Answer Text */}
+									<Text style={[textStyle, styles.answerText]}>
+										{option.text}
+									</Text>
+
+									{/* Explanation Icon */}
+									{hasExplanation && showExplanations && (
+										<IconButton
+											icon="information-outline"
+											size={20}
+											style={styles.explanationIcon}
+											onPress={() => showExplanation(option)}
+										/>
+									)}
+
+									{/* Result Indicators */}
+									{(showResults || hasSubmitted) && (
+										<View style={styles.resultIndicator}>
+											{option.is_correct ? (
+												<MaterialCommunityIcons
+													name="check-circle"
+													size={24}
+													color={theme.colors.primary}
+												/>
+											) : isSelected ? (
+												<MaterialCommunityIcons
+													name="close-circle"
+													size={24}
+													color={theme.colors.error}
+												/>
+											) : null}
+										</View>
+									)}
+								</View>
+							</TouchableOpacity>
+						);
+					})}
+				</Card.Content>
+
+				{/* Submit Button */}
+				{!hasSubmitted && !showResults && (
+					<Card.Actions style={styles.actions}>
+						<Button
+							mode="contained"
+							onPress={handleSubmit}
+							disabled={selectedAnswers.length === 0}
+						>
+							Submit Answer
+						</Button>
+					</Card.Actions>
+				)}
+			</Card>
+
+			{/* Explanation Modal */}
+			<Portal>
+				<Modal
+					visible={showExplanationModal}
+					onDismiss={() => setShowExplanationModal(false)}
+					contentContainerStyle={styles.modalContainer}
+				>
+					<Surface style={styles.modalContent}>
+						<Text style={styles.modalTitle}>Answer Explanation</Text>
+
+						<View style={styles.modalAnswerContainer}>
+							<Text style={styles.modalAnswer}>
+								"{selectedExplanation?.text}"
+							</Text>
+							{selectedExplanation?.isCorrect ? (
+								<MaterialCommunityIcons
+									name="check-circle"
+									size={24}
+									color={theme.colors.primary}
+								/>
+							) : (
+								<MaterialCommunityIcons
+									name="close-circle"
+									size={24}
+									color={theme.colors.error}
+								/>
+							)}
+						</View>
+
+						<Text style={styles.modalExplanation}>
+							{selectedExplanation?.explanation}
+						</Text>
+
+						<Button
+							mode="contained"
+							onPress={() => setShowExplanationModal(false)}
+							style={styles.modalButton}
+						>
+							Close
+						</Button>
+					</Surface>
+				</Modal>
+			</Portal>
+		</>
+	);
 };
 
 const styles = StyleSheet.create({
-  card: {
-    margin: 16,
-    elevation: 4,
-    borderRadius: 12,
-  },
-  questionText: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 16,
-    lineHeight: 24,
-  },
-  metadataContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  metadataText: {
-    fontSize: 14,
-    marginLeft: 8,
-    opacity: 0.7,
-  },
-  divider: {
-    marginVertical: 16,
-  },
-  optionContainer: {
-    borderRadius: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  correctOption: {
-    backgroundColor: '#e8f5e8',
-    borderColor: '#4caf50',
-  },
-  incorrectOption: {
-    backgroundColor: '#ffebee',
-    borderColor: '#f44336',
-  },
-  optionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-  },
-  selectionIndicator: {
-    marginRight: 12,
-  },
-  answerText: {
-    flex: 1,
-    fontSize: 16,
-  },
-  optionText: {
-    color: '#333',
-  },
-  correctText: {
-    color: '#2e7d32',
-    fontWeight: '500',
-  },
-  incorrectText: {
-    color: '#d32f2f',
-    fontWeight: '500',
-  },
-  explanationIcon: {
-    margin: 0,
-  },
-  resultIndicator: {
-    marginLeft: 8,
-  },
-  actions: {
-    justifyContent: 'flex-end',
-    padding: 16,
-  },
-  modalContainer: {
-    padding: 20,
-  },
-  modalContent: {
-    padding: 24,
-    borderRadius: 12,
-    elevation: 8,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  modalAnswerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    padding: 12,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-  },
-  modalAnswer: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  modalExplanation: {
-    fontSize: 16,
-    lineHeight: 22,
-    marginBottom: 24,
-  },
-  modalButton: {
-    alignSelf: 'flex-end',
-  },
+	card: {
+		margin: 16,
+		elevation: 4,
+		borderRadius: 12,
+	},
+	questionText: {
+		fontSize: 18,
+		fontWeight: "600",
+		marginBottom: 16,
+		lineHeight: 24,
+	},
+	metadataContainer: {
+		flexDirection: "row",
+		alignItems: "center",
+		marginBottom: 8,
+	},
+	metadataText: {
+		fontSize: 14,
+		marginLeft: 8,
+		opacity: 0.7,
+	},
+	divider: {
+		marginVertical: 16,
+	},
+	optionContainer: {
+		borderRadius: 8,
+		marginBottom: 8,
+		borderWidth: 1,
+		borderColor: "#e0e0e0",
+	},
+	correctOption: {
+		backgroundColor: "#e8f5e8",
+		borderColor: "#4caf50",
+	},
+	incorrectOption: {
+		backgroundColor: "#ffebee",
+		borderColor: "#f44336",
+	},
+	optionContent: {
+		flexDirection: "row",
+		alignItems: "center",
+		padding: 12,
+	},
+	selectionIndicator: {
+		marginRight: 12,
+	},
+	answerText: {
+		flex: 1,
+		fontSize: 16,
+	},
+	optionText: {
+		color: "#333",
+	},
+	correctText: {
+		color: "#2e7d32",
+		fontWeight: "500",
+	},
+	incorrectText: {
+		color: "#d32f2f",
+		fontWeight: "500",
+	},
+	explanationIcon: {
+		margin: 0,
+	},
+	resultIndicator: {
+		marginLeft: 8,
+	},
+	actions: {
+		justifyContent: "flex-end",
+		padding: 16,
+	},
+	modalContainer: {
+		padding: 20,
+	},
+	modalContent: {
+		padding: 24,
+		borderRadius: 12,
+		elevation: 8,
+	},
+	modalTitle: {
+		fontSize: 20,
+		fontWeight: "bold",
+		marginBottom: 16,
+	},
+	modalAnswerContainer: {
+		flexDirection: "row",
+		alignItems: "center",
+		marginBottom: 16,
+		padding: 12,
+		backgroundColor: "#f5f5f5",
+		borderRadius: 8,
+	},
+	modalAnswer: {
+		flex: 1,
+		fontSize: 16,
+		fontWeight: "500",
+	},
+	modalExplanation: {
+		fontSize: 16,
+		lineHeight: 22,
+		marginBottom: 24,
+	},
+	modalButton: {
+		alignSelf: "flex-end",
+	},
 });
 
 export default EnhancedQuestionCard;

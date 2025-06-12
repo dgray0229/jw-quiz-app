@@ -7,9 +7,7 @@ import { useTheme } from "react-native-paper";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
 // Import screens
-import HomeScreen from "../screens/HomeScreen";
 import DashboardScreen from "../screens/DashboardScreen";
-import LandingScreen from "../screens/LandingScreen";
 import CategoriesScreen from "../screens/CategoriesScreen";
 import QuizListScreen from "../screens/QuizListScreen";
 import QuizScreen from "../screens/QuizScreen";

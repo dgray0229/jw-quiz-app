@@ -70,18 +70,18 @@ const ProfileScreen = () => {
 		try {
 			console.log("🔄 Starting question migration...");
 			const result = await migrateToEnhancedQuestionFormat();
-			
+
 			if (result.success) {
 				Alert.alert(
 					"Migration Successful! 🎉",
 					`Enhanced question format migration completed:\n\n` +
-					`• Migrated: ${result.migratedCount} questions\n` +
-					`• Skipped: ${result.skippedCount} questions\n` +
-					`• Total: ${result.totalCount} questions\n\n` +
-					`Questions can now be randomized with optional explanations!`,
+						`• Migrated: ${result.migratedCount} questions\n` +
+						`• Skipped: ${result.skippedCount} questions\n` +
+						`• Total: ${result.totalCount} questions\n\n` +
+						`Questions can now be randomized with optional explanations!`,
 					[{ text: "Great!", onPress: () => setMigrationDialogVisible(false) }]
 				);
-				
+
 				// Refresh data to get updated questions
 				if (refreshData) {
 					await refreshData();
@@ -120,175 +120,180 @@ const ProfileScreen = () => {
 	};
 
 	return (
-			<SafeAreaView style={{ flex: 1, backgroundColor: "#f5f5f5" }}>
-		<ScrollView style={styles.container}>
-			{/* User info card */}
-			<Card style={styles.userCard}>
-				<Card.Content style={styles.userCardContent}>
-					<Avatar.Image source={{ uri: user.avatar }} size={80} />
-					<View style={styles.userInfo}>
-						<Title>{user.name}</Title>
-						<Paragraph>{user.email}</Paragraph>
-					</View>
-				</Card.Content>
-			</Card>
-
-			{/* Stats cards */}
-			<View style={styles.statsContainer}>
-				<Card style={styles.statsCard}>
-					<Card.Content style={styles.statsCardContent}>
-						<MaterialCommunityIcons
-							name="brain"
-							size={32}
-							color={theme.colors.primary}
-						/>
-						<Title style={styles.statsNumber}>{totalScore}</Title>
-						<Paragraph>Total Points</Paragraph>
-					</Card.Content>
-				</Card>
-
-				<Card style={styles.statsCard}>
-					<Card.Content style={styles.statsCardContent}>
-						<MaterialCommunityIcons
-							name="clipboard-list"
-							size={32}
-							color={theme.colors.accent}
-						/>
-						<Title style={styles.statsNumber}>{quizzesTaken}</Title>
-						<Paragraph>Quizzes Taken</Paragraph>
-					</Card.Content>
-				</Card>
-			</View>
-
-			{/* Quiz history */}
-			<Card style={styles.historyCard}>
-				<Card.Title
-					title="Quiz History"
-					left={(props) => (
-						<MaterialCommunityIcons {...props} name="history" size={24} />
-					)}
-				/>
-				<Divider />
-				<Card.Content>
-					{Object.entries(scores).length > 0 ? (
-						Object.entries(scores).map(([quizId, score], index) => (
-							<List.Item
-								key={index}
-								title={findQuizNameById(quizId)}
-								description={`Score: ${score}`}
-								left={(props) => <List.Icon {...props} icon="star" />}
-							/>
-						))
-					) : (
-						<View style={styles.emptyHistoryContainer}>
-							<Text style={styles.emptyHistoryText}>No quiz history yet</Text>
+		<SafeAreaView style={{ flex: 1, backgroundColor: "#f5f5f5" }}>
+			<ScrollView style={styles.container}>
+				{/* User info card */}
+				<Card style={styles.userCard}>
+					<Card.Content style={styles.userCardContent}>
+						<Avatar.Image source={{ uri: user.avatar }} size={80} />
+						<View style={styles.userInfo}>
+							<Title>{user.name}</Title>
+							<Paragraph>{user.email}</Paragraph>
 						</View>
-					)}
-				</Card.Content>
-			</Card>
+					</Card.Content>
+				</Card>
 
-			{/* Coming soon section */}
-			<Card style={styles.comingSoonCard}>
-				<Card.Title title="Coming Soon" />
-				<Divider />
-				<Card.Content>
-					<List.Item
-						title="User Login & Registration"
-						description="Create an account and save your progress"
-						left={(props) => <List.Icon {...props} icon="account" />}
+				{/* Stats cards */}
+				<View style={styles.statsContainer}>
+					<Card style={styles.statsCard}>
+						<Card.Content style={styles.statsCardContent}>
+							<MaterialCommunityIcons
+								name="brain"
+								size={32}
+								color={theme.colors.primary}
+							/>
+							<Title style={styles.statsNumber}>{totalScore}</Title>
+							<Paragraph>Total Points</Paragraph>
+						</Card.Content>
+					</Card>
+
+					<Card style={styles.statsCard}>
+						<Card.Content style={styles.statsCardContent}>
+							<MaterialCommunityIcons
+								name="clipboard-list"
+								size={32}
+								color={theme.colors.accent}
+							/>
+							<Title style={styles.statsNumber}>{quizzesTaken}</Title>
+							<Paragraph>Quizzes Taken</Paragraph>
+						</Card.Content>
+					</Card>
+				</View>
+
+				{/* Quiz history */}
+				<Card style={styles.historyCard}>
+					<Card.Title
+						title="Quiz History"
+						left={(props) => (
+							<MaterialCommunityIcons {...props} name="history" size={24} />
+						)}
 					/>
-					<List.Item
-						title="Global Leaderboard"
-						description="Compete with other users"
-						left={(props) => <List.Icon {...props} icon="podium" />}
-					/>
-					<List.Item
-						title="New Game Modes"
-						description="'Heads Up' and 'Jeopardy' style quizzes"
-						left={(props) => <List.Icon {...props} icon="controller-classic" />}
-					/>
-				</Card.Content>
-			</Card>
+					<Divider />
+					<Card.Content>
+						{Object.entries(scores).length > 0 ? (
+							Object.entries(scores).map(([quizId, score], index) => (
+								<List.Item
+									key={index}
+									title={findQuizNameById(quizId)}
+									description={`Score: ${score}`}
+									left={(props) => <List.Icon {...props} icon="star" />}
+								/>
+							))
+						) : (
+							<View style={styles.emptyHistoryContainer}>
+								<Text style={styles.emptyHistoryText}>No quiz history yet</Text>
+							</View>
+						)}
+					</Card.Content>
+				</Card>
 
-			{/* Actions */}
-			<View style={styles.actionsContainer}>
-				<Button
-					mode="outlined"
-					onPress={() => setDialogVisible(true)}
-					style={styles.actionButton}
-				>
-					Reset Quiz History
-				</Button>
-				
-				<Button
-					mode="contained"
-					onPress={() => setMigrationDialogVisible(true)}
-					style={[styles.actionButton, { marginTop: 12 }]}
-					icon="upgrade"
-					buttonColor={theme.colors.secondary}
-				>
-					Upgrade Questions Format
-				</Button>
-			</View>
+				{/* Coming soon section */}
+				<Card style={styles.comingSoonCard}>
+					<Card.Title title="Coming Soon" />
+					<Divider />
+					<Card.Content>
+						<List.Item
+							title="User Login & Registration"
+							description="Create an account and save your progress"
+							left={(props) => <List.Icon {...props} icon="account" />}
+						/>
+						<List.Item
+							title="Global Leaderboard"
+							description="Compete with other users"
+							left={(props) => <List.Icon {...props} icon="podium" />}
+						/>
+						<List.Item
+							title="New Game Modes"
+							description="'Heads Up' and 'Jeopardy' style quizzes"
+							left={(props) => (
+								<List.Icon {...props} icon="controller-classic" />
+							)}
+						/>
+					</Card.Content>
+				</Card>
 
-			{/* Confirmation dialogs */}
-			<Portal>
-				<Dialog
-					visible={dialogVisible}
-					onDismiss={() => setDialogVisible(false)}
-				>
-					<Dialog.Title>Reset Quiz History?</Dialog.Title>
-					<Dialog.Content>
-						<Paragraph>
-							This will clear all your quiz scores and history. This action
-							cannot be undone.
-						</Paragraph>
-					</Dialog.Content>
-					<Dialog.Actions>
-						<Button onPress={() => setDialogVisible(false)}>Cancel</Button>
-						<Button onPress={handleClearScores}>Reset</Button>
-					</Dialog.Actions>
-				</Dialog>
+				{/* Actions */}
+				<View style={styles.actionsContainer}>
+					<Button
+						mode="outlined"
+						onPress={() => setDialogVisible(true)}
+						style={styles.actionButton}
+					>
+						Reset Quiz History
+					</Button>
 
-				<Dialog
-					visible={migrationDialogVisible}
-					onDismiss={() => setMigrationDialogVisible(false)}
-				>
-					<Dialog.Title>Upgrade Question Format? 🚀</Dialog.Title>
-					<Dialog.Content>
-						<Paragraph style={{ marginBottom: 16 }}>
-							This will upgrade your questions to the enhanced format with:
-						</Paragraph>
-						<Text style={{ marginLeft: 16, marginBottom: 8 }}>
-							• ✅ Randomizable answer options
-						</Text>
-						<Text style={{ marginLeft: 16, marginBottom: 8 }}>
-							• 📝 Optional answer explanations
-						</Text>
-						<Text style={{ marginLeft: 16, marginBottom: 8 }}>
-							• 🎯 Multiple correct answers support
-						</Text>
-						<Text style={{ marginLeft: 16, marginBottom: 16 }}>
-							• 🔄 Better quiz experience
-						</Text>
-						<Paragraph style={{ fontStyle: 'italic', opacity: 0.8 }}>
-							This is safe and reversible. Existing questions will be preserved.
-						</Paragraph>
-					</Dialog.Content>
-					<Dialog.Actions>
-						<Button onPress={() => setMigrationDialogVisible(false)}>Cancel</Button>
-						<Button 
-							onPress={handleQuestionMigration}
-							loading={migrating}
-							disabled={migrating}
-						>
-							{migrating ? "Upgrading..." : "Upgrade"}
-						</Button>
-					</Dialog.Actions>
-				</Dialog>
-			</Portal>
-		</ScrollView>
-	</SafeAreaView>
+					<Button
+						mode="contained"
+						onPress={() => setMigrationDialogVisible(true)}
+						style={[styles.actionButton, { marginTop: 12 }]}
+						icon="upgrade"
+						buttonColor={theme.colors.secondary}
+					>
+						Upgrade Questions Format
+					</Button>
+				</View>
+
+				{/* Confirmation dialogs */}
+				<Portal>
+					<Dialog
+						visible={dialogVisible}
+						onDismiss={() => setDialogVisible(false)}
+					>
+						<Dialog.Title>Reset Quiz History?</Dialog.Title>
+						<Dialog.Content>
+							<Paragraph>
+								This will clear all your quiz scores and history. This action
+								cannot be undone.
+							</Paragraph>
+						</Dialog.Content>
+						<Dialog.Actions>
+							<Button onPress={() => setDialogVisible(false)}>Cancel</Button>
+							<Button onPress={handleClearScores}>Reset</Button>
+						</Dialog.Actions>
+					</Dialog>
+
+					<Dialog
+						visible={migrationDialogVisible}
+						onDismiss={() => setMigrationDialogVisible(false)}
+					>
+						<Dialog.Title>Upgrade Question Format? 🚀</Dialog.Title>
+						<Dialog.Content>
+							<Paragraph style={{ marginBottom: 16 }}>
+								This will upgrade your questions to the enhanced format with:
+							</Paragraph>
+							<Text style={{ marginLeft: 16, marginBottom: 8 }}>
+								• ✅ Randomizable answer options
+							</Text>
+							<Text style={{ marginLeft: 16, marginBottom: 8 }}>
+								• 📝 Optional answer explanations
+							</Text>
+							<Text style={{ marginLeft: 16, marginBottom: 8 }}>
+								• 🎯 Multiple correct answers support
+							</Text>
+							<Text style={{ marginLeft: 16, marginBottom: 16 }}>
+								• 🔄 Better quiz experience
+							</Text>
+							<Paragraph style={{ fontStyle: "italic", opacity: 0.8 }}>
+								This is safe and reversible. Existing questions will be
+								preserved.
+							</Paragraph>
+						</Dialog.Content>
+						<Dialog.Actions>
+							<Button onPress={() => setMigrationDialogVisible(false)}>
+								Cancel
+							</Button>
+							<Button
+								onPress={handleQuestionMigration}
+								loading={migrating}
+								disabled={migrating}
+							>
+								{migrating ? "Upgrading..." : "Upgrade"}
+							</Button>
+						</Dialog.Actions>
+					</Dialog>
+				</Portal>
+			</ScrollView>
+		</SafeAreaView>
 	);
 };
 

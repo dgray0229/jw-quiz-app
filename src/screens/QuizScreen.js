@@ -61,27 +61,30 @@ const QuizScreen = ({ route, navigation }) => {
 	const handleAnswerSelection = (answerData) => {
 		// Handle both old format (index) and new format (option object)
 		let answerIndex;
-		
-		if (typeof answerData === 'number') {
+
+		if (typeof answerData === "number") {
 			// Old format: direct index
 			answerIndex = answerData;
-		} else if (answerData && typeof answerData === 'object') {
+		} else if (answerData && typeof answerData === "object") {
 			// New format: option object - find the index in the original options
 			const currentQuestion = quiz?.questions[currentQuestionIndex];
 			if (currentQuestion?.answer_options) {
 				// For enhanced format, find index by matching option text or id
-				answerIndex = currentQuestion.answer_options.findIndex(opt => 
-					(typeof opt === 'object' && opt.id === answerData.id) ||
-					opt === answerData.text ||
-					opt === answerData
+				answerIndex = currentQuestion.answer_options.findIndex(
+					(opt) =>
+						(typeof opt === "object" && opt.id === answerData.id) ||
+						opt === answerData.text ||
+						opt === answerData
 				);
 			} else if (currentQuestion?.options) {
 				// For old format, find index by matching text
-				answerIndex = currentQuestion.options.findIndex(opt => opt === answerData.text);
+				answerIndex = currentQuestion.options.findIndex(
+					(opt) => opt === answerData.text
+				);
 			}
-			
+
 			if (answerIndex === -1) {
-				console.warn('Could not find answer index for:', answerData);
+				console.warn("Could not find answer index for:", answerData);
 				answerIndex = 0;
 			}
 		}
