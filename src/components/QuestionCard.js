@@ -78,14 +78,10 @@ const QuestionCard = ({
 				</Title>
 
 				<View style={styles.optionsContainer}>
-					{(question && Array.isArray(question.answerOptions)
-						? question.answerOptions
-						: question && Array.isArray(question.answer_options)
-						? question.answer_options
-						: question && typeof question.answer_options === "string"
-						? JSON.parse(question.answer_options || '[""]')
-						: []
-					).map((option, index) => (
+					{(question?.answerOptions || []).map((option, index) => {
+						// Handle both string and object formats
+						const optionText = typeof option === 'string' ? option : option.text;
+						return (
 						<Button
 							key={index}
 							mode="contained"
@@ -103,9 +99,9 @@ const QuestionCard = ({
 								fontWeight: "bold",
 							}}
 						>
-							{option}
+							{optionText}
 						</Button>
-					))}
+					)}))}
 				</View>
 			</Card.Content>
 		</Card>

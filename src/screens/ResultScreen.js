@@ -128,39 +128,53 @@ const ResultScreen = ({ route, navigation }) => {
 										/>
 
 										<View style={styles.answerResultContainer}>
-											{answers[index] === question.correctAnswer ? (
-												<View style={styles.answerResult}>
-													<MaterialCommunityIcons
-														name="check-circle"
-														size={20}
-														color="#4CAF50"
-													/>
-													<Text
-														style={[
-															styles.answerResultText,
-															{ color: "#4CAF50" },
-														]}
-													>
-														Correct answer!
-													</Text>
-												</View>
-											) : (
-												<View style={styles.answerResult}>
-													<MaterialCommunityIcons
-														name="close-circle"
-														size={20}
-														color="#F44336"
-													/>
-													<Text
-														style={[
-															styles.answerResultText,
-															{ color: "#F44336" },
-														]}
-													>
-														Incorrect answer
-													</Text>
-												</View>
-											)}
+											{(() => {
+												// Since all questions are processed through processQuestionData,
+												// they all have normalized answerOptions with is_correct flags
+												const answerOptions = question.answerOptions;
+												
+												if (!answerOptions || !Array.isArray(answerOptions)) {
+													console.error('Invalid answerOptions in ResultScreen:', answerOptions);
+													return null;
+												}
+												
+												const selectedOption = answerOptions[answers[index]];
+												const isCorrect = selectedOption && selectedOption.is_correct;
+												
+												return isCorrect ? (
+													<View style={styles.answerResult}>
+														<MaterialCommunityIcons
+															name="check-circle"
+															size={20}
+															color="#4CAF50"
+														/>
+														<Text
+															style={[
+																styles.answerResultText,
+																{ color: "#4CAF50" },
+															]}
+														>
+															Correct answer!
+														</Text>
+													</View>
+												) : (
+													<View style={styles.answerResult}>
+														<MaterialCommunityIcons
+															name="close-circle"
+															size={20}
+															color="#F44336"
+														/>
+														<Text
+															style={[
+																styles.answerResultText,
+																{ color: "#F44336" },
+															]}
+														>
+															Incorrect answer
+														</Text>
+													</View>
+												);
+											})()}
 										</View>
 									</View>
 								))}

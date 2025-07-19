@@ -4,19 +4,37 @@
 /**
  * Shuffle answer options while preserving their properties
  * @param {Array} answerOptions - Array of answer option objects
+ * @param {string|number} seed - Optional seed for consistent shuffling
  * @returns {Array} Shuffled array of answer options
  */
-export const shuffleAnswers = (answerOptions) => {
+export const shuffleAnswers = (answerOptions, seed = null) => {
 	if (!answerOptions || !Array.isArray(answerOptions)) {
 		console.warn("Invalid answerOptions provided to shuffleAnswers");
 		return [];
 	}
 
+	// If seed is provided, use a seeded random number generator
+	// This ensures consistent shuffling for the same question
 	const shuffled = [...answerOptions];
-	for (let i = shuffled.length - 1; i > 0; i--) {
-		const j = Math.floor(Math.random() * (i + 1));
-		[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+	
+	if (seed !== null) {
+		// Simple seeded random using the seed to generate consistent indices
+		const seedNum = typeof seed === 'string' ? seed.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : seed;
+		
+		// Fisher-Yates shuffle with seeded random
+		for (let i = shuffled.length - 1; i > 0; i--) {
+			// Generate a pseudo-random index based on seed and current position
+			const j = Math.floor((seedNum * (i + 1) * 9301 + 49297) % 233280 / 233280 * (i + 1));
+			[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+		}
+	} else {
+		// Regular random shuffle
+		for (let i = shuffled.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+		}
 	}
+	
 	return shuffled;
 };
 
@@ -112,60 +130,115 @@ export const validateAnswer = (
 };
 
 /**
- * Process question data to handle both old and new formats
+ * Process question data to handle all format variations
+ * This is the SINGLE source of truth for question format transformation
  * @param {Object} question - Question object from database
- * @returns {Object} Processed question with normalized format
+ * @returns {Object} Processed question with normalized enhanced format
  */
 export const processQuestionData = (question) => {
 	if (!question) return null;
 
-	// New enhanced format
-	if (question.answer_options?.answer_options) {
-		return {
-			...question,
-			answerOptions: question.answer_options.answer_options,
-			shuffleAnswers: question.answer_options.shuffle_answers !== false, // Default true
-			multipleCorrect: question.answer_options.multiple_correct === true, // Default false
-			hasExplanations: question.answer_options.answer_options.some(
-				(opt) => opt.explanation
-			),
-		};
-	}
+	console.log(`Processing question ${question.id || 'unknown'}, correct_answer: ${question.correct_answer}`);
+	
+	let answerOptions = null;
+	let metadata = {
+		shuffleAnswers: false,
+		multipleCorrect: false
+	};
 
-	// Legacy format with simple answer_options array
-	if (question.answer_options && Array.isArray(question.answer_options)) {
-		return {
-			...question,
-			answerOptions: question.answer_options.map((option, index) => ({
+	// Case 1: Nested enhanced format (answer_options is an object with metadata)
+	if (question.answer_options && typeof question.answer_options === 'object' && !Array.isArray(question.answer_options) && question.answer_options.answer_options) {
+		console.log('Detected nested enhanced format');
+		answerOptions = question.answer_options.answer_options;
+		metadata.shuffleAnswers = question.answer_options.shuffle_answers !== false;
+		metadata.multipleCorrect = question.answer_options.multiple_correct === true;
+	}
+	// Case 2: Direct array of objects with is_correct property
+	else if (Array.isArray(question.answer_options) && question.answer_options.length > 0 && typeof question.answer_options[0] === 'object' && 'is_correct' in question.answer_options[0]) {
+		console.log('Detected direct enhanced format');
+		answerOptions = question.answer_options;
+	}
+	// Case 3: Legacy array of strings with separate correct_answer index
+	else if (Array.isArray(question.answer_options)) {
+		console.log('Detected legacy string array format');
+		answerOptions = question.answer_options.map((option, index) => ({
+			id: String.fromCharCode(97 + index),
+			text: typeof option === "string" ? option : String(option),
+			is_correct: index === (question.correct_answer || 0),
+			explanation: null
+		}));
+	}
+	// Case 4: Old format with separate 'options' field
+	else if (Array.isArray(question.options)) {
+		console.log('Detected old options array format');
+		answerOptions = question.options.map((option, index) => ({
+			id: String.fromCharCode(97 + index),
+			text: typeof option === "string" ? option : String(option),
+			is_correct: index === (question.correct_answer || 0),
+			explanation: null
+		}));
+	}
+	// Case 5: String that needs to be parsed
+	else if (typeof question.answer_options === 'string') {
+		try {
+			console.log('Attempting to parse string answer_options');
+			const parsed = JSON.parse(question.answer_options);
+			// Recursively process the parsed result
+			return processQuestionData({ ...question, answer_options: parsed });
+		} catch (error) {
+			console.error('Failed to parse answer_options string:', error);
+			// Fallback to default options
+			answerOptions = ["Option A", "Option B", "Option C", "Option D"].map((text, index) => ({
 				id: String.fromCharCode(97 + index),
-				text: typeof option === "string" ? option : option.text || option,
-				is_correct: index === question.correct_answer,
-				explanation: null,
-			})),
-			shuffleAnswers: false, // Disable shuffling to prevent quiz reset issues
-			multipleCorrect: false,
-			hasExplanations: false,
-		};
+				text,
+				is_correct: index === 0,
+				explanation: null
+			}));
+		}
+	}
+	else {
+		console.warn('Unknown answer_options format:', question.answer_options);
+		// Fallback to default options
+		answerOptions = ["Option A", "Option B", "Option C", "Option D"].map((text, index) => ({
+			id: String.fromCharCode(97 + index),
+			text,
+			is_correct: index === 0,
+			explanation: null
+		}));
 	}
 
-	// Very old format with separate options and correct_answer
-	if (question.options && Array.isArray(question.options)) {
-		return {
-			...question,
-			answerOptions: question.options.map((option, index) => ({
-				id: String.fromCharCode(97 + index),
-				text: option,
-				is_correct: index === question.correct_answer,
-				explanation: null,
-			})),
-			shuffleAnswers: false, // Disable shuffling to prevent quiz reset issues
-			multipleCorrect: false,
-			hasExplanations: false,
-		};
+	// Handle case where correct_answer is -1 but no is_correct flags are set
+	if (question.correct_answer === -1) {
+		const hasCorrectAnswer = answerOptions.some(opt => opt.is_correct === true);
+		if (!hasCorrectAnswer && answerOptions.length > 0) {
+			console.warn(`Question ${question.id} has correct_answer: -1 but no is_correct flags. Setting first option as correct.`);
+			answerOptions[0].is_correct = true;
+		}
 	}
 
-	console.warn("Question format not recognized:", question);
-	return null;
+	// Ensure all answer options have required properties
+	answerOptions = answerOptions.map((opt, index) => ({
+		id: opt.id || String.fromCharCode(97 + index),
+		text: opt.text || `Option ${index + 1}`,
+		is_correct: opt.is_correct === true,
+		explanation: opt.explanation || null
+	}));
+
+	// Check if any option has an explanation
+	const hasExplanations = answerOptions.some(opt => opt.explanation !== null);
+
+	// Return normalized question
+	return {
+		...question,
+		questionText: question.questionText || question.question_text || "",
+		answerOptions,
+		shuffleAnswers: metadata.shuffleAnswers,
+		multipleCorrect: metadata.multipleCorrect,
+		hasExplanations,
+		// Remove the old correct_answer field to avoid confusion
+		correct_answer: undefined,
+		correctAnswer: undefined
+	};
 };
 
 /**

@@ -54,35 +54,41 @@ const EnhancedQuestionCard = ({
 
 		setProcessedQuestion(processed);
 
-		// Shuffle answers if enabled
+		// Shuffle answers if enabled - only shuffle when question changes
+		// Use question.id as a key to ensure consistent shuffling for the same question
 		const options = processed.shuffleAnswers
-			? shuffleAnswers(processed.answerOptions)
+			? shuffleAnswers(processed.answerOptions, question.id)
 			: processed.answerOptions;
 
 		setShuffledOptions(options);
 		setSelectedAnswers([]);
 		setHasSubmitted(false);
-	}, [question]);
+	}, [question?.id, question?.question_text]); // Only re-shuffle when question actually changes
 
 	// Handle external selectedAnswer prop (for QuizScreen compatibility)
 	useEffect(() => {
-		if (selectedAnswer !== undefined && shuffledOptions.length > 0) {
-			// Find the option by index (QuizScreen passes index)
+		if (selectedAnswer !== undefined && processedQuestion && shuffledOptions.length > 0) {
+			// QuizScreen passes index based on original order, not shuffled order
 			if (
 				typeof selectedAnswer === "number" &&
 				selectedAnswer >= 0 &&
-				selectedAnswer < shuffledOptions.length
+				selectedAnswer < processedQuestion.answerOptions.length
 			) {
-				const option = shuffledOptions[selectedAnswer];
-				if (option) {
-					setSelectedAnswers([option]);
+				// Find the option in the original order
+				const originalOption = processedQuestion.answerOptions[selectedAnswer];
+				// Then find it in the shuffled array
+				const shuffledOption = shuffledOptions.find(opt => 
+					opt.id === originalOption.id || opt.text === originalOption.text
+				);
+				if (shuffledOption) {
+					setSelectedAnswers([shuffledOption]);
 				}
 			} else if (selectedAnswer === null || selectedAnswer === undefined) {
 				// Clear selection
 				setSelectedAnswers([]);
 			}
 		}
-	}, [selectedAnswer, shuffledOptions]);
+	}, [selectedAnswer, shuffledOptions, processedQuestion]);
 
 	// Handle answer selection
 	const handleAnswerSelect = (selectedOption) => {
@@ -114,11 +120,11 @@ const EnhancedQuestionCard = ({
 			newSelectedAnswers = [selectedOption];
 			setSelectedAnswers(newSelectedAnswers);
 
-			// For single selection, pass the index for QuizScreen compatibility
-			const optionIndex = shuffledOptions.findIndex(
-				(opt) => opt.id === selectedOption.id
+			// For single selection, pass the index based on original order for QuizScreen compatibility
+			const originalIndex = processedQuestion.answerOptions.findIndex(
+				(opt) => opt.id === selectedOption.id || opt.text === selectedOption.text
 			);
-			onAnswer && onAnswer(optionIndex);
+			onAnswer && onAnswer(originalIndex);
 		}
 	};
 

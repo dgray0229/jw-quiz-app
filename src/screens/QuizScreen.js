@@ -125,18 +125,33 @@ const QuizScreen = ({ route, navigation }) => {
 
 		let correctAnswers = 0;
 		quiz.questions.forEach((question, index) => {
-			// Get correct answer considering different formats
-			const correctAnswer =
-				typeof question.correctAnswer === "number"
-					? question.correctAnswer
-					: typeof question.correct_answer === "number"
-					? question.correct_answer
-					: parseInt(question.correct_answer || "0", 10);
-
-			if (selectedAnswers[index] === correctAnswer) {
+			console.log(`\nChecking question ${index + 1}:`);
+			console.log(`Question: ${question.questionText}`);
+			console.log(`Selected answer index: ${selectedAnswers[index]}`);
+			
+			// Since we're using processQuestionData, all questions should have normalized answerOptions
+			const answerOptions = question.answerOptions;
+			
+			if (!answerOptions || !Array.isArray(answerOptions)) {
+				console.error(`Question ${index + 1} has invalid answerOptions:`, answerOptions);
+				return;
+			}
+			
+			// All questions now have is_correct flags thanks to processQuestionData
+			const selectedOption = answerOptions[selectedAnswers[index]];
+			
+			if (selectedOption && selectedOption.is_correct) {
 				correctAnswers++;
+				console.log(`✓ Correct! Selected: "${selectedOption.text}"`);
+			} else {
+				console.log(`✗ Incorrect. Selected: "${selectedOption?.text || 'none'}"`);
+				// Log which was the correct answer
+				const correctOption = answerOptions.find(opt => opt.is_correct);
+				console.log(`  Correct answer was: "${correctOption?.text || 'not found'}"`);
 			}
 		});
+
+		console.log(`\n=== Final Score: ${correctAnswers}/${quiz.questions.length} ===\n`);
 
 		// Navigate to results screen
 		navigation.navigate("Result", {
@@ -180,37 +195,19 @@ const QuizScreen = ({ route, navigation }) => {
 		);
 	}
 
-	// Current question - ensure it has the proper format for our components
-	let currentQuestion = quiz.questions[currentQuestionIndex];
-
-	// Make sure the current question has the right format
-	if (currentQuestion) {
-		// Normalize the question data to have consistent properties
-		currentQuestion = {
-			...currentQuestion,
-			// Ensure questionText exists
-			questionText:
-				currentQuestion.questionText || currentQuestion.question_text || "",
-
-			// Ensure answerOptions is an array
-			answerOptions: Array.isArray(currentQuestion.answerOptions)
-				? currentQuestion.answerOptions
-				: Array.isArray(currentQuestion.answer_options)
-				? currentQuestion.answer_options
-				: typeof currentQuestion.answer_options === "string"
-				? JSON.parse(currentQuestion.answer_options || '[""]')
-				: [],
-
-			// Ensure correctAnswer is a number
-			correctAnswer:
-				typeof currentQuestion.correctAnswer === "number"
-					? currentQuestion.correctAnswer
-					: typeof currentQuestion.correct_answer === "number"
-					? currentQuestion.correct_answer
-					: parseInt(currentQuestion.correct_answer || "0", 10),
-		};
-
-		console.log("Normalized current question:", currentQuestion);
+	// Current question - already processed by processQuestionData in QuizContext
+	const currentQuestion = quiz.questions[currentQuestionIndex];
+	
+	if (!currentQuestion) {
+		console.error("No question found at index:", currentQuestionIndex);
+	} else {
+		console.log("Current question:", {
+			id: currentQuestion.id,
+			questionText: currentQuestion.questionText,
+			answerCount: currentQuestion.answerOptions?.length || 0,
+			shuffleAnswers: currentQuestion.shuffleAnswers,
+			hasExplanations: currentQuestion.hasExplanations
+		});
 	}
 	const progress = (currentQuestionIndex + 1) / quiz.questions.length;
 	const isLastQuestion = currentQuestionIndex === quiz.questions.length - 1;

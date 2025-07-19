@@ -1,6 +1,8 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { supabase } from "../utils/supabaseClient";
 import * as Device from "expo-device";
+import { debugQuestions, fixProblematicQuestions } from "../utils/debugQuestions";
+import { processQuestionData } from "../utils/questionUtils";
 
 const QuizContext = createContext();
 
@@ -71,7 +73,13 @@ export const QuizProvider = ({ children }) => {
 			const { data, error } = await supabase.from("questions").select("*");
 			if (!error) {
 				console.log(`Fetched ${data.length} questions from Supabase:`, data);
-				setQuestions(data);
+				
+				// Debug the questions to identify problematic data
+				debugQuestions(data);
+				
+				// Fix any problematic questions before storing
+				const fixedQuestions = fixProblematicQuestions(data);
+				setQuestions(fixedQuestions);
 			} else {
 				console.error("Error fetching questions:", error);
 			}
@@ -136,19 +144,15 @@ export const QuizProvider = ({ children }) => {
 			const quizQuestions = questions
 				.filter((q) => String(q.quiz_id) === String(quiz.id))
 				.map((question) => {
-					// Transform the question to match the expected format in the app
-					return {
-						...question,
-						questionText: question.question_text,
-						answerOptions: Array.isArray(question.answer_options)
-							? question.answer_options
-							: JSON.parse(question.answer_options || '[""]'),
-						correctAnswer:
-							typeof question.correct_answer === "number"
-								? question.correct_answer
-								: parseInt(question.correct_answer || "0", 10),
-					};
-				});
+					// Use the centralized processQuestionData function
+					const processedQuestion = processQuestionData(question);
+					if (!processedQuestion) {
+						console.error(`Failed to process question ${question.id}`);
+						return null;
+					}
+					return processedQuestion;
+				})
+				.filter(q => q !== null); // Remove any failed questions
 
 			console.log(`Quiz ${quiz.id} has ${quizQuestions.length} questions`);
 
@@ -172,19 +176,15 @@ export const QuizProvider = ({ children }) => {
 		const quizQuestions = questions
 			.filter((q) => String(q.quiz_id) === String(quizId))
 			.map((question) => {
-				// Transform the question to match the expected format in the app
-				return {
-					...question,
-					questionText: question.question_text,
-					answerOptions: Array.isArray(question.answer_options)
-						? question.answer_options
-						: JSON.parse(question.answer_options || '[""]'),
-					correctAnswer:
-						typeof question.correct_answer === "number"
-							? question.correct_answer
-							: parseInt(question.correct_answer || "0", 10),
-				};
-			});
+				// Use the centralized processQuestionData function
+				const processedQuestion = processQuestionData(question);
+				if (!processedQuestion) {
+					console.error(`Failed to process question ${question.id}`);
+					return null;
+				}
+				return processedQuestion;
+			})
+			.filter(q => q !== null); // Remove any failed questions
 
 		console.log(`Found ${quizQuestions.length} questions for quiz ${quizId}`);
 
