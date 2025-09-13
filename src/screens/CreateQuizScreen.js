@@ -17,7 +17,7 @@ import {
 	useTheme,
 } from "react-native-paper";
 import { useQuiz } from "../context/QuizContext";
-import { supabase } from "../utils/supabaseClient";
+import databaseService from "../services/databaseService";
 
 const CreateQuizScreen = ({ navigation }) => {
 	const theme = useTheme();
@@ -127,18 +127,14 @@ const CreateQuizScreen = ({ navigation }) => {
 
 		setSaving(true);
 		try {
-			// Insert quiz into Supabase
-			const { data: quizData, error: quizError } = await supabase
+			// Insert quiz into database
+			const { data: quizData, error: quizError } = await databaseService
 				.from("quizzes")
-				.insert([
-					{
-						title: quizTitle,
-						description: quizDescription,
-						category_id: selectedCategory,
-					},
-				])
-				.select()
-				.single();
+				.insert({
+					title: quizTitle,
+					description: quizDescription,
+					category_id: selectedCategory,
+				});
 
 			if (quizError || !quizData) {
 				throw quizError || new Error("Quiz creation failed");
@@ -146,17 +142,15 @@ const CreateQuizScreen = ({ navigation }) => {
 
 			const quizId = quizData.id;
 
-			// Insert questions into Supabase
+			// Insert questions into database
 			const questionsToInsert = questions.map((q) => ({
 				quiz_id: quizId,
 				question_text: q.questionText,
-				answer_options: q.answerOptions,
+				answer_options: JSON.stringify(q.answerOptions),
 				correct_answer: q.correctAnswer,
 			}));
 
-			const { error: questionsError } = await supabase
-				.from("questions")
-				.insert(questionsToInsert);
+			const { error: questionsError } = await databaseService.insertQuestions(questionsToInsert);
 
 			if (questionsError) {
 				throw questionsError;

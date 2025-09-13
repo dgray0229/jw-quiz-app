@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
-import { supabase } from "../utils/supabaseClient";
+import databaseService from "../services/databaseService";
 import * as Device from "expo-device";
 import { debugQuestions, fixProblematicQuestions } from "../utils/debugQuestions";
 import { processQuestionData } from "../utils/questionUtils";
@@ -19,16 +19,24 @@ export const QuizProvider = ({ children }) => {
 		const getOrCreateDeviceId = async () => {
 			let id = null;
 			try {
-				id = localStorage.getItem("quiz_device_id");
-				if (!id) {
-					id = `${Device.modelName || "web"}-${Date.now()}-${Math.random()
+				// Try localStorage for web
+				if (typeof localStorage !== 'undefined') {
+					id = localStorage.getItem("quiz_device_id");
+					if (!id) {
+						id = `${Device.modelName || "web"}-${Date.now()}-${Math.random()
+							.toString(36)
+							.substring(2, 9)}`;
+						localStorage.setItem("quiz_device_id", id);
+					}
+				} else {
+					// For React Native, create a unique device ID
+					id = `${Device.modelName || "mobile"}-${Date.now()}-${Math.random()
 						.toString(36)
 						.substring(2, 9)}`;
-					localStorage.setItem("quiz_device_id", id);
 				}
 			} catch (e) {
-				// fallback for React Native (no localStorage)
-				id = `${Device.modelName || "mobile"}-${Date.now()}-${Math.random()
+				// fallback for any environment
+				id = `device-${Date.now()}-${Math.random()
 					.toString(36)
 					.substring(2, 9)}`;
 			}
@@ -37,12 +45,12 @@ export const QuizProvider = ({ children }) => {
 		getOrCreateDeviceId();
 	}, []);
 
-	// Fetch all categories from Supabase
+	// Fetch all categories from database
 	const fetchCategories = async () => {
 		try {
-			const { data, error } = await supabase.from("categories").select("*");
+			const { data, error } = await databaseService.from("categories").select("*");
 			if (!error) {
-				console.log(`Fetched ${data.length} categories from Supabase:`, data);
+				console.log(`Fetched ${data.length} categories from database:`, data);
 				setCategories(data);
 			} else {
 				console.error("Error fetching categories:", error);
@@ -52,12 +60,12 @@ export const QuizProvider = ({ children }) => {
 		}
 	};
 
-	// Fetch all quizzes from Supabase
+	// Fetch all quizzes from database
 	const fetchQuizzes = async () => {
 		try {
-			const { data, error } = await supabase.from("quizzes").select("*");
+			const { data, error } = await databaseService.from("quizzes").select("*");
 			if (!error) {
-				console.log(`Fetched ${data.length} quizzes from Supabase:`, data);
+				console.log(`Fetched ${data.length} quizzes from database:`, data);
 				setQuizzes(data);
 			} else {
 				console.error("Error fetching quizzes:", error);
@@ -67,12 +75,12 @@ export const QuizProvider = ({ children }) => {
 		}
 	};
 
-	// Fetch all questions from Supabase
+	// Fetch all questions from database
 	const fetchQuestions = async () => {
 		try {
-			const { data, error } = await supabase.from("questions").select("*");
+			const { data, error } = await databaseService.from("questions").select("*");
 			if (!error) {
-				console.log(`Fetched ${data.length} questions from Supabase:`, data);
+				console.log(`Fetched ${data.length} questions from database:`, data);
 				
 				// Debug the questions to identify problematic data
 				debugQuestions(data);
@@ -88,14 +96,11 @@ export const QuizProvider = ({ children }) => {
 		}
 	};
 
-	// Fetch best scores for this device from Supabase
+	// Fetch best scores for this device from database
 	const fetchScores = async (deviceId) => {
 		if (!deviceId) return;
 		try {
-			const { data, error } = await supabase
-				.from("device_scores")
-				.select("quiz_id, score")
-				.eq("device_id", deviceId);
+			const { data, error } = await databaseService.getDeviceScores(deviceId);
 			if (!error && data) {
 				// Map to { quizId: bestScore }
 				const bestScores = {};
@@ -116,6 +121,11 @@ export const QuizProvider = ({ children }) => {
 	useEffect(() => {
 		const loadAll = async () => {
 			setLoading(true);
+			
+			// Initialize database and seed initial data if needed
+			await databaseService.initialize();
+			await databaseService.seedInitialData();
+			
 			await fetchCategories();
 			await fetchQuizzes();
 			await fetchQuestions();
@@ -201,11 +211,7 @@ export const QuizProvider = ({ children }) => {
 		if (!deviceId) return;
 		try {
 			// Insert new score
-			await supabase.from("device_scores").insert({
-				device_id: deviceId,
-				quiz_id: quizId,
-				score: newScore,
-			});
+			await databaseService.insertDeviceScore(deviceId, quizId, newScore);
 			// Refresh scores
 			await fetchScores(deviceId);
 		} catch (error) {
@@ -213,9 +219,9 @@ export const QuizProvider = ({ children }) => {
 		}
 	};
 
-	// Refresh all data from Supabase (for database reset functionality)
+	// Refresh all data from database (for database reset functionality)
 	const refreshData = async () => {
-		console.log("Refreshing all data from Supabase...");
+		console.log("Refreshing all data from database...");
 		setLoading(true);
 		await fetchCategories();
 		await fetchQuizzes();

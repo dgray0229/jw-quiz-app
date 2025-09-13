@@ -41,18 +41,22 @@ const ProfileScreen = () => {
 		setQuizzesTaken(scoreValues.length);
 	}, [scores]);
 
-	// Clear all scores from Supabase for this device
+	// Clear all scores from database for this device
 	const handleClearScores = async () => {
 		try {
-			// Get deviceId from context (QuizContext)
-			const deviceId = localStorage.getItem("quiz_device_id");
+			// Get deviceId from localStorage or create fallback
+			let deviceId;
+			if (typeof localStorage !== 'undefined') {
+				deviceId = localStorage.getItem("quiz_device_id");
+			}
+			
 			if (deviceId) {
-				const { error } = await import("../utils/supabaseClient").then(
-					({ supabase }) =>
-						supabase.from("device_scores").delete().eq("device_id", deviceId)
+				const databaseService = await import("../services/databaseService").then(
+					module => module.default
 				);
+				const { error } = await databaseService.deleteDeviceScores(deviceId);
 				if (error) {
-					console.error("Error clearing scores from Supabase:", error);
+					console.error("Error clearing scores from database:", error);
 				}
 			}
 		} catch (e) {

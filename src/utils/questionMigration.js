@@ -1,7 +1,7 @@
 // src/utils/questionMigration.js
 // Utility to migrate questions to the new randomization-safe format with optional explanations
 
-import { supabase } from "./supabaseClient";
+import databaseService from "../services/databaseService";
 
 /**
  * Enhanced question structure:
@@ -35,7 +35,7 @@ export const migrateToEnhancedQuestionFormat = async () => {
 
 	try {
 		// Get all existing questions
-		const { data: questions, error: fetchError } = await supabase
+		const { data: questions, error: fetchError } = await databaseService
 			.from("questions")
 			.select("*");
 
@@ -87,12 +87,11 @@ export const migrateToEnhancedQuestionFormat = async () => {
 					multiple_correct: false, // Single correct answer by default
 				};
 
-				const { error: updateError } = await supabase
+				const { error: updateError } = await databaseService
 					.from("questions")
 					.update({
-						answer_options: enhancedQuestionData,
+						answer_options: JSON.stringify(enhancedQuestionData),
 						// Remove old columns if they exist
-						options: null,
 						correct_answer: null,
 					})
 					.eq("id", question.id);
@@ -129,10 +128,10 @@ export const migrateToEnhancedQuestionFormat = async () => {
 					multiple_correct: false,
 				};
 
-				const { error: updateError } = await supabase
+				const { error: updateError } = await databaseService
 					.from("questions")
 					.update({
-						answer_options: enhancedQuestionData,
+						answer_options: JSON.stringify(enhancedQuestionData),
 					})
 					.eq("id", question.id);
 
@@ -179,13 +178,14 @@ export const testMigrationOnSingleQuestion = async (questionId) => {
 	console.log(`🧪 Testing migration on question: ${questionId}`);
 
 	try {
-		const { data: question, error } = await supabase
+		const { data: questions, error } = await databaseService
 			.from("questions")
-			.select("*")
-			.eq("id", questionId)
-			.single();
-
+			.select("*");
+		
 		if (error) throw error;
+		
+		const question = questions.find(q => q.id === questionId);
+		if (!question) throw new Error(`Question with ID ${questionId} not found`);
 
 		console.log("Before migration:", JSON.stringify(question, null, 2));
 
@@ -222,7 +222,7 @@ export const rollbackQuestionMigration = async () => {
 	console.log("⚠️  Starting migration rollback...");
 
 	try {
-		const { data: questions, error: fetchError } = await supabase
+		const { data: questions, error: fetchError } = await databaseService
 			.from("questions")
 			.select("*");
 
@@ -240,12 +240,11 @@ export const rollbackQuestionMigration = async () => {
 					(opt) => opt.is_correct
 				);
 
-				const { error: updateError } = await supabase
+				const { error: updateError } = await databaseService
 					.from("questions")
 					.update({
-						options: options,
+						answer_options: JSON.stringify(options),
 						correct_answer: correctAnswerIndex,
-						answer_options: answerOptions, // Keep as simple array
 					})
 					.eq("id", question.id);
 
